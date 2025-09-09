@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/sih-dashboard-test-1/static/css/main.c07a9246.css",
+    "main.js": "/sih-dashboard-test-1/static/js/main.e2957e4b.js",
+    "static/js/488.aa694ef4.chunk.js": "/sih-dashboard-test-1/static/js/488.aa694ef4.chunk.js",
+    "service-worker.js": "/sih-dashboard-test-1/service-worker.js",
+    "index.html": "/sih-dashboard-test-1/index.html",
+    "main.c07a9246.css.map": "/sih-dashboard-test-1/static/css/main.c07a9246.css.map",
+    "main.e2957e4b.js.map": "/sih-dashboard-test-1/static/js/main.e2957e4b.js.map",
+    "488.aa694ef4.chunk.js.map": "/sih-dashboard-test-1/static/js/488.aa694ef4.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c07a9246.css",
+    "static/js/main.e2957e4b.js"
+  ]
+}
