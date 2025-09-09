@@ -1,8 +1,8 @@
-# Guardian Eagle - Technical Architecture and Working Principles
+# Travira - Technical Architecture and Working Principles
 
 ## System Overview
 
-Guardian Eagle is an advanced AI-powered safety monitoring system specifically designed for the Tourism Department and Police forces. The system provides comprehensive real-time safety monitoring of tourists through multiple integrated technologies.
+Travira is an advanced AI-powered safety monitoring system specifically designed for the Tourism Department and Police forces. The system provides comprehensive real-time safety monitoring of tourists through multiple integrated technologies.
 
 ## Core Technologies
 
