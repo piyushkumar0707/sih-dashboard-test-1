@@ -12,6 +12,9 @@ import SystemHealth from './pages/SystemHealth';
 import Reports from './pages/Reports';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
+import ActivityLog from './pages/ActivityLog';
+import Security from './pages/Security';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
@@ -50,6 +53,9 @@ function AppContent() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/activity-log" element={<ActivityLog />} />
+            <Route path="/security" element={<Security />} />
           </Routes>
         </main>
       </div>
