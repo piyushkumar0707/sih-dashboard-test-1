@@ -436,14 +436,217 @@ app.get('/api/dashboard/recent-activity', (req, res) => {
   res.json(activities);
 });
 
+// ===== MOBILE-SPECIFIC ENDPOINTS =====
+
+// Mobile authentication with device ID
+app.post('/api/mobile/auth/login', async (req, res) => {
+  try {
+    const { username, password, deviceId } = req.body;
+    
+    // Find user by username or email
+    const user = await User.findOne({ 
+      $or: [{ username }, { email: username }] 
+    });
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Check password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Check if user is suspended
+    if (user.status === 'suspended') {
+      return res.status(403).json({ error: 'Account suspended. Contact administrator.' });
+    }
+    
+    // Store device ID for push notifications
+    if (deviceId) {
+      user.deviceId = deviceId;
+      user.lastActiveDevice = new Date();
+      await user.save();
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user._id, 
+        username: user.username, 
+        role: user.role,
+        status: user.status
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    res.json({ 
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      },
+      apiBaseUrl: `http://localhost:${PORT}/api`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Location update endpoint for mobile
+app.post('/api/mobile/location/update', authenticateToken, async (req, res) => {
+  try {
+    const { lat, lng, accuracy, timestamp } = req.body;
+    const userId = req.user.userId;
+    
+    // Find or create tourist entry
+    let touristIndex = tourists.findIndex(t => t.userId === userId.toString());
+    
+    if (touristIndex === -1) {
+      // Create new tourist entry
+      const newTourist = {
+        id: `T-${tourists.length + 1}`.padStart(5, '0'),
+        userId: userId.toString(),
+        name: req.user.username,
+        location: { lat, lng },
+        safetyScore: 85, // Default safety score
+        status: 'active',
+        lastUpdated: new Date(timestamp || Date.now()),
+        accuracy: accuracy || 0
+      };
+      tourists.push(newTourist);
+      touristIndex = tourists.length - 1;
+    } else {
+      // Update existing tourist location
+      tourists[touristIndex].location = { lat, lng };
+      tourists[touristIndex].lastUpdated = new Date(timestamp || Date.now());
+      tourists[touristIndex].accuracy = accuracy || 0;
+    }
+    
+    // Calculate basic safety score based on location (simplified)
+    const safetyScore = Math.max(50, Math.min(100, 85 + Math.random() * 20 - 10));
+    tourists[touristIndex].safetyScore = Math.round(safetyScore);
+    tourists[touristIndex].status = safetyScore < 70 ? 'high-risk' : 'active';
+    
+    res.json({ 
+      success: true, 
+      message: 'Location updated successfully',
+      tourist: tourists[touristIndex]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Panic alert endpoint
+app.post('/api/mobile/panic/alert', authenticateToken, async (req, res) => {
+  try {
+    const { lat, lng, message } = req.body;
+    const userId = req.user.userId;
+    const username = req.user.username;
+    
+    // Find tourist info
+    const tourist = tourists.find(t => t.userId === userId.toString());
+    const touristId = tourist ? tourist.id : `T-${userId.toString().slice(-3)}`;
+    
+    // Create emergency incident
+    const panicIncident = {
+      id: `PANIC-${Date.now()}`,
+      type: 'Emergency Alert',
+      location: lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Unknown Location',
+      severity: 'High',
+      status: 'Open',
+      touristId: touristId,
+      tourist: username,
+      assignedOfficer: 'Emergency Response Team',
+      createdAt: new Date().toISOString(),
+      description: message || 'Panic button activated - Emergency assistance required!',
+      coordinates: { lat, lng }
+    };
+    
+    incidents.push(panicIncident);
+    
+    // Update tourist status to high-risk
+    if (tourist) {
+      tourist.status = 'emergency';
+      tourist.safetyScore = 0;
+    }
+    
+    // Log the panic alert
+    console.log(`🚨 PANIC ALERT: ${username} at ${lat}, ${lng} - ${message}`);
+    
+    res.json({ 
+      success: true, 
+      incidentId: panicIncident.id,
+      message: 'Emergency alert sent successfully! Help is on the way!',
+      estimatedResponse: '5-10 minutes'
+    });
+  } catch (error) {
+    console.error('Panic alert error:', error);
+    res.status(500).json({ error: 'Failed to send panic alert' });
+  }
+});
+
+// Get tourist's current status and safety info
+app.get('/api/mobile/tourist/status', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const tourist = tourists.find(t => t.userId === userId.toString());
+    
+    if (!tourist) {
+      return res.json({
+        status: 'not_tracking',
+        message: 'Location tracking not yet started',
+        safetyScore: 85,
+        recommendations: ['Enable location sharing for better safety monitoring']
+      });
+    }
+    
+    res.json({
+      tourist: tourist,
+      safetyTips: [
+        'Stay in well-lit areas',
+        'Keep your phone charged',
+        'Share your location with family',
+        'Use the panic button in emergencies'
+      ],
+      nearbyServices: [
+        { type: 'police', distance: '0.5 km', contact: '100' },
+        { type: 'hospital', distance: '1.2 km', contact: '102' },
+        { type: 'tourist_help', distance: '0.8 km', contact: '1363' }
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Sample API endpoint
 app.get('/api/hello', (req, res) => {
   res.json({ message: 'Hello from the Travira backend!' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+// Simple test endpoint for Android debugging
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    status: 'success',
+    message: 'Android connection test successful!',
+    timestamp: new Date().toISOString(),
+    server: 'Travira Backend'
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend server running on http://0.0.0.0:${PORT}`);
+  console.log(`Also accessible at http://localhost:${PORT}`);
   console.log('Available endpoints:');
+  console.log('Web API Endpoints:');
   console.log('  - POST /api/login');
   console.log('  - POST /api/register');
   console.log('  - GET  /api/users');
@@ -451,4 +654,9 @@ app.listen(PORT, () => {
   console.log('  - GET  /api/incidents');
   console.log('  - GET  /api/health');
   console.log('  - GET  /api/dashboard/stats');
+  console.log('Mobile API Endpoints:');
+  console.log('  - POST /api/mobile/auth/login');
+  console.log('  - POST /api/mobile/location/update');
+  console.log('  - POST /api/mobile/panic/alert');
+  console.log('  - GET  /api/mobile/tourist/status');
 });

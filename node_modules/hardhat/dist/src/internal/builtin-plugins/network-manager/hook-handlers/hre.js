@@ -1,0 +1,19 @@
+import { DEFAULT_NETWORK_NAME } from "../../../constants.js";
+export default async () => ({
+    created: async (context, hre) => {
+        let networkManager;
+        const userConfigNetworks = hre.userConfig.networks;
+        hre.network = {
+            async connect(networkConnectionParams) {
+                const { NetworkManagerImplementation } = await import("../network-manager.js");
+                if (networkManager === undefined) {
+                    networkManager = new NetworkManagerImplementation(hre.globalOptions.network !== undefined
+                        ? hre.globalOptions.network
+                        : DEFAULT_NETWORK_NAME, hre.config.defaultChainType, hre.config.networks, context.hooks, context.artifacts, userConfigNetworks, hre.config.chainDescriptors);
+                }
+                return networkManager.connect(networkConnectionParams);
+            },
+        };
+    },
+});
+//# sourceMappingURL=hre.js.map
