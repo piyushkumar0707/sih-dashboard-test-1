@@ -5,8 +5,8 @@ module.exports = {
   solidity: "0.8.20",
   networks: {
     mumbai: {
-      url: process.env.ALCHEMY_MUMBAI_URL,
-      accounts: [process.env.PRIVATE_KEY],
+      url: process.env.ALCHEMY_MUMBAI_URL, // Your Alchemy/Infura URL
+      accounts: [process.env.PRIVATE_KEY], // Your wallet private key
     },
   },
 };
