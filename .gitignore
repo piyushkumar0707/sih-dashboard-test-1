@@ -77,3 +77,4 @@ local.properties
 /captures/
 .externalNativeBuild/
 .cxx/
+.env
