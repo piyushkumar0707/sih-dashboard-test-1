@@ -1,18 +1,25 @@
+require("dotenv").config({ path: "../.env" }); // load .env first
+console.log("ALCHEMY_AMOY_URL:", process.env.ALCHEMY_AMOY_URL);
+console.log("PRIVATE_KEY:", process.env.PRIVATE_KEY ? "Loaded" : "Missing");
+
 const express = require("express");
-const bodyParser = require("body-parser");
+const bodyParser = require("body-parser"); // optional, can use express.json()
 const { ethers } = require("ethers");
 const fs = require("fs");
 const path = require("path");
-require("dotenv").config({ path: "../.env" }); // points one folder up to root
-
 
 const app = express();
-app.use(bodyParser.json());
+app.use(bodyParser.json()); // parse JSON bodies
+
+// Optional root route to avoid "Cannot GET /"
+app.get("/", (req, res) => {
+  res.send("Credential Registry API is running!");
+});
 
 const PORT = process.env.PORT || 4000;
 
 // Paths
-const deployedFile = path.join(__dirname, "scripts" ,"deployedAddresses.json");
+const deployedFile = path.join(__dirname, "scripts", "deployedAddresses.json");
 
 // Read deployed contract address
 function getContractAddress() {
@@ -21,7 +28,7 @@ function getContractAddress() {
 }
 
 // Initialize provider and signer
-const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_MUMBAI_URL);
+const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_AMOY_URL);
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 const contractAddress = getContractAddress();
@@ -43,11 +50,10 @@ function writeLog(data) {
 // POST /anchor
 app.post("/anchor", async (req, res) => {
   try {
-    const { credential } = req.body; // Pass a string or data to hash
+    const { credential } = req.body;
     const vcHash = ethers.keccak256(ethers.toUtf8Bytes(credential));
     const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // 30 days
 
-    // Check if already exists
     const existing = await registry.credentials(vcHash).catch(() => null);
     if (existing && existing.expiry != 0) {
       return res.status(400).json({ error: "Credential already exists" });
