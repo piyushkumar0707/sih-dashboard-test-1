@@ -1,7 +1,7 @@
 // src/api.js
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000'; // Change if backend runs elsewhere
+const API_BASE_URL = 'https://backend-7kk1.onrender.com'; // Change if backend runs elsewhere
 
 const api = axios.create({
   baseURL: API_BASE_URL,
