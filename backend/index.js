@@ -76,7 +76,7 @@ app.get('/api/ai/alerts', (req, res) => {
 });
 
 // MongoDB connection
-mongoose.connect(`${process.env.MONGODB_URI}/travira`, {
+mongoose.connect(`${process.env.MONGODB_URI}/${process.env.DB_NAME}`, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
