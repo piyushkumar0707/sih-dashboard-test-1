@@ -448,6 +448,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support & Contact
 
 - **Project Repository**: [GitHub Issues](https://github.com/piyushkumar0707/sih-dashboard-test-1/issues)
+- **Email**: 121piyush466mits@gmail.com
 - **Documentation**: Comprehensive guides in `/docs` directory
 - **Community**: Join discussions in repository discussions section
 
