@@ -93,7 +93,7 @@ Frontend `package.json` already has:
    - Scroll down to "Environment Variables"
    - Add all variables from `.env`:
      ```
-     MONGODB_URI=mongodb+srv://memesyou709_db_user:hello123@piyush0707.ga5mpiv.mongodb.net/travira
+     MONGODB_URI=mongodb+srv://.mongodb.net/travira
      JWT_SECRET=travira-production-secret-2024
      NODE_ENV=production
      PORT=10000
