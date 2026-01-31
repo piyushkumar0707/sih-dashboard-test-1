@@ -8,12 +8,12 @@
 
 > A comprehensive AI-powered safety monitoring and incident management system for the tourism sector, providing real-time dashboards, tourist tracking, AI analytics, and blockchain-secured logging.
 
-## 🎯 Project Overview
+### 🌍 Live Demo of the Prototype 
+- **GitHub Repository**: [https://github.com/piyushkumar0707/sih-dashboard-test-1/raw/refs/heads/main/WhatsApp%20Video%202025-10-06%20at%2015.54.43.mp4](https://github.com/piyushkumar0707/sih-dashboard-test-1/raw/refs/heads/main/WhatsApp%20Video%202025-10-06%20at%2015.54.43.mp4)
+
+- ## 🎯 Project Overview
 
 **Travira** is a sophisticated tourism safety management platform designed to protect tourists through real-time monitoring, automated incident response, and secure data management. The system integrates cutting-edge technologies including AI analytics, blockchain security, geo-fencing, and digital identity management to create a comprehensive safety ecosystem.
-
-### 🌍 Live Demo
-- **GitHub Repository**: [https://github.com/piyushkumar0707/sih-dashboard-test-1](https://github.com/piyushkumar0707/sih-dashboard-test-1)
 
 ## ✨ Key Features
 
@@ -448,6 +448,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support & Contact
 
 - **Project Repository**: [GitHub Issues](https://github.com/piyushkumar0707/sih-dashboard-test-1/issues)
+- **Email**: 121piyush466mits@gmail.com
 - **Documentation**: Comprehensive guides in `/docs` directory
 - **Community**: Join discussions in repository discussions section
 
