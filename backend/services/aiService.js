@@ -26,7 +26,7 @@ class AIService {
         geofence_risk: geofenceRisk,
         anomalies: anomalies
       }, {
-        timeout: 5000
+        timeout: 45000  // 45 seconds to allow for service wake-up from sleep
       });
       
       return {
@@ -72,7 +72,7 @@ class AIService {
         alert: incidentData.type || 'Incident',
         last_location: incidentData.location || 'Unknown'
       }, {
-        timeout: 10000
+        timeout: 45000  // 45 seconds to allow for service wake-up from sleep
       });
       
       return {
@@ -144,14 +144,14 @@ class AIService {
     };
 
     try {
-      const safetyCheck = await axios.get(`${AI_SAFETY_SCORE_URL}/`, { timeout: 3000 });
+      const safetyCheck = await axios.get(`${AI_SAFETY_SCORE_URL}/`, { timeout: 45000 });  // 45 seconds
       services.safetyScore = safetyCheck.status === 200;
     } catch (error) {
       console.log('Safety Score Service unavailable');
     }
 
     try {
-      const reportCheck = await axios.get(`${AI_CASE_REPORT_URL}/`, { timeout: 3000 });
+      const reportCheck = await axios.get(`${AI_CASE_REPORT_URL}/`, { timeout: 45000 });  // 45 seconds
       services.caseReport = reportCheck.status === 200;
     } catch (error) {
       console.log('Case Report Service unavailable');
