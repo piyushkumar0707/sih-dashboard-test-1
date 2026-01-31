@@ -29,7 +29,7 @@ const TouristMonitoring = () => {
     fetchTourists();
     const id = setInterval(fetchTourists, 30000);
     return () => clearInterval(id);
-  }, []);
+  }, [fetchTourists]);
 
   const filtered = useMemo(() => {
     if (!query) return tourists;

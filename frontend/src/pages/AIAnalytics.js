@@ -49,7 +49,7 @@ const AIAnalytics = () => {
     fetchAnalytics();
     const interval = setInterval(fetchAnalytics, 10000); // Poll every 10 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchAnalytics]);
 
   return (
     <div className="space-y-6">

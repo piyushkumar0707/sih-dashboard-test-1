@@ -11,7 +11,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } fro
 import { saveAs } from 'file-saver';
 
 const Reports = () => {
-  const { apiRequest } = useAuth();
+  // const { apiRequest } = useAuth();
   const [touristId, setTouristId] = useState('');
   const [alert, setAlert] = useState('');
   const [location, setLocation] = useState('');
