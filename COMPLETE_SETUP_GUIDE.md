@@ -42,7 +42,7 @@ npm install
 
 ```env
 # MongoDB Configuration
-MONGODB_URI=mongodb+srv://your-username:your-password@cluster.mongodb.net/travira?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority
 
 # JWT Secret
 JWT_SECRET=your-super-secret-jwt-key-change-in-production

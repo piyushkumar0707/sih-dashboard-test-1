@@ -28,7 +28,7 @@ Complete guide to deploy the Travira Tourism Safety Platform to production.
 
 **Backend `.env`** (already configured):
 ```env
-MONGODB_URI=mongodb+srv://mongodb.net/travira
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 PORT=5000
 NODE_ENV=production
