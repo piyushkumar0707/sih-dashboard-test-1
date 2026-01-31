@@ -28,7 +28,8 @@ const SystemHealth = () => {
     fetchHealth();
     const id = setInterval(fetchHealth, 60000); // Poll every 60 seconds instead of 30
     return () => clearInterval(id);
-  }, [fetchHealth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-6">
