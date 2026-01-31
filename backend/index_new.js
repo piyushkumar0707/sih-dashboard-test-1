@@ -291,20 +291,10 @@ app.put('/api/tourists/:id/safety-score', async (req, res) => {
 
 // ===== INCIDENT MANAGEMENT ENDPOINTS =====
 
-app.get('/api/incidents', authenticateToken, async (req, res) => {
+app.get('/api/incidents', authenticateToken, requireRole('admin', 'officer'), async (req, res) => {
   try {
     const { status, severity } = req.query;
-    const userRole = req.user.role;
     let query = {};
-    
-    // If tourist, only show incidents related to them
-    if (userRole === 'tourist') {
-      const touristData = await Tourist.findOne({ userId: req.user.userId });
-      if (!touristData) {
-        return res.json({ incidents: [], summary: { total: 0, open: 0, resolved: 0, investigating: 0 } });
-      }
-      query.touristId = touristData._id;
-    }
     
     if (status && status !== 'all') {
       query.status = status;
@@ -479,16 +469,14 @@ app.get('/api/health', async (req, res) => {
       { 
         name: 'AI Safety Score', 
         status: aiServices.safetyScore ? 'online' : 'offline', 
-        uptime: aiServices.safetyScore ? '98.5%' : '0%', 
-        responseTime: aiServices.safetyScore ? '450ms' : 'N/A',
-        optional: true
+        uptime: '98.5%', 
+        responseTime: '450ms' 
       },
       { 
         name: 'AI Case Report', 
         status: aiServices.caseReport ? 'online' : 'offline', 
-        uptime: aiServices.caseReport ? '99.2%' : '0%', 
-        responseTime: aiServices.caseReport ? '1200ms' : 'N/A',
-        optional: true
+        uptime: '99.2%', 
+        responseTime: '1200ms' 
       },
       { 
         name: 'Database', 
@@ -499,15 +487,12 @@ app.get('/api/health', async (req, res) => {
       { 
         name: 'Blockchain', 
         status: blockchainOnline ? 'online' : 'offline', 
-        uptime: blockchainOnline ? '95.1%' : '0%', 
-        responseTime: blockchainOnline ? '2300ms' : 'N/A',
-        optional: true
+        uptime: '95.1%', 
+        responseTime: '2300ms' 
       }
     ];
     
-    // Only consider critical services (non-optional) for overall status
-    const criticalServices = services.filter(s => !s.optional);
-    const overallStatus = criticalServices.every(s => s.status === 'online') ? 'healthy' : 'degraded';
+    const overallStatus = services.every(s => s.status === 'online') ? 'healthy' : 'degraded';
     
     res.json({
       overall: overallStatus,
@@ -521,29 +506,8 @@ app.get('/api/health', async (req, res) => {
 
 // ===== DASHBOARD STATS ENDPOINTS =====
 
-app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
+app.get('/api/dashboard/stats', authenticateToken, requireRole('admin', 'officer'), async (req, res) => {
   try {
-    const userRole = req.user.role;
-    
-    // If tourist, return limited stats relevant to them
-    if (userRole === 'tourist') {
-      const touristData = await Tourist.findOne({ userId: req.user.userId });
-      const allIncidents = await Incident.find({});
-      const openIncidents = allIncidents.filter(i => i.status === 'open' || i.status === 'investigating').length;
-      
-      return res.json({
-        activeTourists: 1,
-        totalTourists: 1,
-        openIncidents: openIncidents,
-        totalIncidents: allIncidents.length,
-        averageSafetyScore: touristData ? touristData.safetyScore : 85,
-        highRiskTourists: touristData && touristData.safetyScore < 70 ? 1 : 0,
-        systemUptime: '99.8%',
-        averageResponseTime: '2.3 min'
-      });
-    }
-    
-    // For admin/officer, return full stats
     const tourists = await Tourist.find({});
     const incidentStats = await Incident.getStats();
     

@@ -164,7 +164,7 @@ async function seedDatabase() {
         type: 'safe_zone',
         description: 'Protected tourist area around Red Fort',
         geometry: {
-          type: 'Point',
+          type: 'Circle',
           coordinates: [77.2410, 28.6562],
           radius: 500
         },
@@ -177,7 +177,7 @@ async function seedDatabase() {
         type: 'restricted_area',
         description: 'No entry - Military installation',
         geometry: {
-          type: 'Point',
+          type: 'Circle',
           coordinates: [77.2500, 28.6600],
           radius: 1000
         },
@@ -190,7 +190,7 @@ async function seedDatabase() {
         type: 'high_risk',
         description: 'Area with elevated security concerns',
         geometry: {
-          type: 'Point',
+          type: 'Circle',
           coordinates: [77.2300, 28.6400],
           radius: 750
         },
@@ -203,7 +203,7 @@ async function seedDatabase() {
         type: 'tourist_attraction',
         description: 'Popular tourist destination with security',
         geometry: {
-          type: 'Point',
+          type: 'Circle',
           coordinates: [77.2295, 28.6129],
           radius: 400
         },

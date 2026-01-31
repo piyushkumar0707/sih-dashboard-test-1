@@ -65,13 +65,21 @@ export const AuthProvider = ({ children }) => {
         method,
         ...options,
       };
-      if (options.body) config.data = options.body;
+      // Parse JSON string body if present
+      if (options.body) {
+        config.data = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+      }
       const response = await api(config);
       return { data: response.data, response };
     } catch (error) {
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      console.error('API Request Error:', error);
+      // Only logout on 401 (unauthorized), not on 403 (forbidden)
+      if (error.response && error.response.status === 401) {
         logout();
         return { error: 'Session expired. Please login again.' };
+      }
+      if (error.response && error.response.status === 403) {
+        return { error: 'Access denied. You do not have permission to access this resource.' };
       }
       return { error: error.response?.data?.error || 'Network error' };
     }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   HomeIcon, 
   UsersIcon, 
@@ -16,19 +17,25 @@ import {
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
+  const { user } = useAuth();
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'User Management', href: '/users', icon: UsersIcon },
-    { name: 'Tourist Monitoring', href: '/tourists', icon: MapIcon },
-    { name: 'Incident Management', href: '/incidents', icon: ExclamationTriangleIcon },
-    { name: 'AI Analytics', href: '/ai-analytics', icon: ChartBarIcon },
-    { name: 'Blockchain Logs', href: '/blockchain', icon: CubeIcon },
-    { name: 'System Health', href: '/system-health', icon: HeartIcon },
-    { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
-    { name: 'Notifications', href: '/notifications', icon: BellIcon },
-    { name: 'Settings', href: '/settings', icon: CogIcon },
+  const allNavigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, roles: ['admin', 'officer', 'tourist'] },
+    { name: 'User Management', href: '/users', icon: UsersIcon, roles: ['admin'] },
+    { name: 'Tourist Monitoring', href: '/tourists', icon: MapIcon, roles: ['admin', 'officer'] },
+    { name: 'Incident Management', href: '/incidents', icon: ExclamationTriangleIcon, roles: ['admin', 'officer', 'tourist'] },
+    { name: 'AI Analytics', href: '/ai-analytics', icon: ChartBarIcon, roles: ['admin', 'officer'] },
+    { name: 'Blockchain Logs', href: '/blockchain', icon: CubeIcon, roles: ['admin', 'officer'] },
+    { name: 'System Health', href: '/system-health', icon: HeartIcon, roles: ['admin', 'officer'] },
+    { name: 'Reports', href: '/reports', icon: DocumentTextIcon, roles: ['admin', 'officer'] },
+    { name: 'Notifications', href: '/notifications', icon: BellIcon, roles: ['admin', 'officer', 'tourist'] },
+    { name: 'Settings', href: '/settings', icon: CogIcon, roles: ['admin', 'officer', 'tourist'] },
   ];
+
+  // Filter navigation based on user role
+  const navigation = allNavigation.filter(item => 
+    item.roles.includes(user?.role || 'tourist')
+  );
 
   return (
     <>
@@ -55,7 +62,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             </div>
             <div className="ml-3">
               <h1 className="text-white text-lg font-semibold">Travira</h1>
-              <p className="text-gray-300 text-xs">Admin Dashboard</p>
+              <p className="text-gray-300 text-xs">
+                {user?.role === 'tourist' ? 'Tourist Dashboard' : 
+                 user?.role === 'officer' ? 'Officer Dashboard' : 
+                 'Admin Dashboard'}
+              </p>
             </div>
           </div>
           <button

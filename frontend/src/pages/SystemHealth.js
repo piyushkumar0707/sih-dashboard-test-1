@@ -26,7 +26,7 @@ const SystemHealth = () => {
 
   useEffect(() => {
     fetchHealth();
-    const id = setInterval(fetchHealth, 30000);
+    const id = setInterval(fetchHealth, 60000); // Poll every 60 seconds instead of 30
     return () => clearInterval(id);
   }, []);
 
@@ -71,11 +71,14 @@ const SystemHealth = () => {
                   <div key={svc.name} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <StatusDot status={svc.status} />
-                      <span className="text-sm font-medium text-gray-900">{svc.name}</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {svc.name}
+                        {svc.optional && <span className="ml-2 text-xs text-gray-400">(optional)</span>}
+                      </span>
                     </div>
                     <div className="text-xs text-gray-500 space-x-4">
                       <span>Uptime: {svc.uptime}</span>
-                      {svc.responseTime && <span>RT: {svc.responseTime}</span>}
+                      {svc.responseTime && svc.responseTime !== 'N/A' && <span>RT: {svc.responseTime}</span>}
                     </div>
                   </div>
                 ))}

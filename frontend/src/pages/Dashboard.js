@@ -12,12 +12,13 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
-  const { apiRequest } = useAuth();
+  const { apiRequest, user } = useAuth();
 
   const [stats, setStats] = useState({
     activeTourists: 245,
     openIncidents: 7,
     avgSafetyScore: 87,
+    averageSafetyScore: 87,
     officersOnDuty: 32,
     highRiskAreas: 3,
     incidentsToday: 12,
@@ -28,6 +29,8 @@ const Dashboard = () => {
   const [recentIncidents, setRecentIncidents] = useState([]);
 
   const [systemHealth, setSystemHealth] = useState([]);
+
+  const isTourist = user?.role === 'tourist';
 
   useEffect(() => {
     // Fetch dashboard stats, incidents, and system health on mount
@@ -113,38 +116,83 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {isTourist ? 'My Safety Dashboard' : 'Dashboard Overview'}
+        </h2>
+        <p className="text-gray-600">
+          {isTourist ? 'Track your safety status and incidents' : 'Real-time overview of tourist safety operations'}
+        </p>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Active Tourists"
-          value={stats.activeTourists.toLocaleString()}
-          change="+12 from yesterday"
-          changeType="positive"
-          icon={UsersIcon}
-          color="bg-blue-500"
-        />
-        <StatCard
-          title="Open Incidents"
-          value={stats.openIncidents}
-          change="-3 from yesterday"
-          changeType="positive"
-          icon={ExclamationTriangleIcon}
-          color="bg-red-500"
-        />
-        <StatCard
-          title="Avg Safety Score"
-          value={stats.avgSafetyScore + '%'}
-          change="+2.1% this week"
-          changeType="positive"
-          icon={ShieldCheckIcon}
-          color="bg-green-500"
-        />
-        <StatCard
-          title="Officers on Duty"
-          value={stats.officersOnDuty}
-          icon={MapPinIcon}
-          color="bg-purple-500"
-        />
+        {isTourist ? (
+          <>
+            <StatCard
+              title="My Safety Score"
+              value={stats.averageSafetyScore + '%'}
+              change="+2.1% this week"
+              changeType="positive"
+              icon={ShieldCheckIcon}
+              color="bg-green-500"
+            />
+            <StatCard
+              title="My Incidents"
+              value={recentIncidents.length}
+              icon={ExclamationTriangleIcon}
+              color="bg-red-500"
+            />
+            <StatCard
+              title="Open Incidents"
+              value={stats.openIncidents}
+              change="-3 from yesterday"
+              changeType="positive"
+              icon={ExclamationTriangleIcon}
+              color="bg-orange-500"
+            />
+            <StatCard
+              title="System Status"
+              value="Online"
+              icon={CheckCircleIcon}
+              color="bg-blue-500"
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Active Tourists"
+              value={stats.activeTourists?.toLocaleString() || 0}
+              change="+12 from yesterday"
+              changeType="positive"
+              icon={UsersIcon}
+              color="bg-blue-500"
+            />
+            <StatCard
+              title="Open Incidents"
+              value={stats.openIncidents}
+              change="-3 from yesterday"
+              changeType="positive"
+              icon={ExclamationTriangleIcon}
+              color="bg-red-500"
+            />
+            <StatCard
+              title="Avg Safety Score"
+              value={(stats.averageSafetyScore || stats.avgSafetyScore) + '%'}
+              change="+2.1% this week"
+              changeType="positive"
+              icon={ShieldCheckIcon}
+              color="bg-green-500"
+            />
+            <StatCard
+              title="Officers on Duty"
+              value={stats.officersOnDuty || 0}
+              icon={MapPinIcon}
+              color="bg-purple-500"
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

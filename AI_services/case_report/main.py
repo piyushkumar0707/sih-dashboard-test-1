@@ -5,6 +5,10 @@ import uuid
 
 app = FastAPI()
 
+@app.get("/")
+def root():
+    return {"message": "Case Report API is running", "status": "healthy"}
+
 @app.post("/report")
 def generate_case_report(tourist_id: str, alert: str, last_location: str):
     filename = f"report_{uuid.uuid4().hex}.pdf"

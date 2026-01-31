@@ -95,8 +95,10 @@ const AIAnalytics = () => {
             <button onClick={handleCalculateSafety} disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">{loading ? 'Calculating...' : 'Calculate Safety Score'}</button>
             {result && (
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg font-semibold">Safety Score: {result.safetyScore}</div>
-                <div className="text-sm text-gray-600 mt-1">Factors: Geofence Risk: {result.factors.geofenceRisk}, Anomalies: {result.factors.anomalies}</div>
+                <div className="text-lg font-semibold">Safety Score: {result.safetyScore || 0}</div>
+                {result.factors && (
+                  <div className="text-sm text-gray-600 mt-1">Factors: Geofence Risk: {result.factors.geofenceRisk || 0}, Anomalies: {result.factors.anomalies || 0}</div>
+                )}
               </div>
             )}
           </div>
