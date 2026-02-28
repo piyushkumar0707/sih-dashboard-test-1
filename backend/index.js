@@ -376,6 +376,61 @@ app.put('/api/incidents/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// 6.4 — Generate E-FIR PDF for an incident
+app.post('/api/incidents/:id/generate-report', authenticateToken, async (req, res) => {
+  try {
+    const incident = await Incident.findOne({ incidentId: req.params.id });
+    if (!incident) return res.status(404).json({ error: 'Incident not found' });
+
+    // Enrich with tourist safety score if available
+    let safetyScore = null;
+    if (incident.touristId) {
+      const tourist = await Tourist.findOne({ touristId: incident.touristId });
+      if (tourist) safetyScore = tourist.safetyScore ?? null;
+    }
+
+    const coordStr = incident.coordinates?.lat && incident.coordinates?.lng
+      ? `${incident.coordinates.lat.toFixed(5)}, ${incident.coordinates.lng.toFixed(5)}`
+      : null;
+
+    const result = await AIService.generateIncidentReport({
+      incident_id: incident.incidentId,
+      type: incident.type,
+      location: incident.location,
+      severity: incident.severity,
+      description: incident.description,
+      tourist_name: incident.tourist || 'Unknown',
+      tourist_id: incident.touristId || '-',
+      officer_name: incident.assignedOfficer || 'Unassigned',
+      timestamp: incident.createdAt ? incident.createdAt.toISOString() : null,
+      safety_score_at_time: safetyScore,
+      coordinates: coordStr,
+      blockchain_hash: incident.blockchainHash || null,
+      status: incident.status,
+    });
+
+    if (!result.success && !result.pdf_base64) {
+      return res.status(503).json({ error: result.error || 'Report generation failed' });
+    }
+
+    // 6.5 — Mark report generated on the incident
+    incident.reportGenerated = true;
+    incident.reportGeneratedAt = new Date();
+    await incident.save();
+
+    res.json({
+      success: true,
+      incident_id: incident.incidentId,
+      fir_number: result.fir_number,
+      pdf_base64: result.pdf_base64,
+      generated_at: result.generated_at,
+    });
+  } catch (err) {
+    console.error('E-FIR generation error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ===== AI SERVICE INTEGRATION ENDPOINTS =====
 
 app.post('/api/ai/safety-score', async (req, res) => {

@@ -11,6 +11,7 @@ const IncidentManagement = () => {
   const [filters, setFilters] = useState({ status: 'all', severity: 'all' });
   const [newIncident, setNewIncident] = useState({ type: '', location: '', severity: 'Low', touristId: '', description: '' });
   const [creating, setCreating] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(null); // incidentId being processed
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -70,6 +71,36 @@ const IncidentManagement = () => {
       await fetchIncidents();
     } else {
       alert(result.error || 'Failed to update incident');
+    }
+  };
+
+  const handleGenerateReport = async (inc) => {
+    setGeneratingReport(inc.id);
+    try {
+      const result = await apiRequest(`/api/incidents/${inc.id}/generate-report`, { method: 'POST' });
+      if (result.error) {
+        alert(`Failed to generate E-FIR: ${result.error}`);
+        return;
+      }
+      const { pdf_base64, fir_number } = result.data;
+      // Decode base64 → Blob → download
+      const byteChars = atob(pdf_base64);
+      const byteNums = Array.from(byteChars).map(c => c.charCodeAt(0));
+      const blob = new Blob([new Uint8Array(byteNums)], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fir_number || inc.id}-EFIR.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // Reflect reportGenerated locally
+      setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, reportGenerated: true } : i));
+    } catch (e) {
+      alert('Report generation failed. Is the case report service running?');
+    } finally {
+      setGeneratingReport(null);
     }
   };
 
@@ -158,6 +189,24 @@ const IncidentManagement = () => {
                       <span>• Assigned: {inc.assignedOfficer || '—'} • {new Date(inc.createdAt).toLocaleString()}</span>
                     </div>
                     {inc.description && <div className="mt-2 text-sm text-gray-700">{inc.description}</div>}
+                    <div className="mt-3 flex items-center space-x-2">
+                      <button
+                        onClick={() => handleGenerateReport(inc)}
+                        disabled={generatingReport === inc.id}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                      >
+                        {generatingReport === inc.id ? (
+                          <><span className="animate-spin mr-1.5">⏳</span>Generating...</>
+                        ) : (
+                          <><span className="mr-1.5">📄</span>Generate E-FIR</>
+                        )}
+                      </button>
+                      {inc.reportGenerated && (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                          ✓ E-FIR Generated
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

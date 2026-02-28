@@ -68,6 +68,13 @@ const incidentSchema = new mongoose.Schema({
   blockchainHash: {
     type: String  // Hash of blockchain transaction
   },
+  reportGenerated: {
+    type: Boolean,
+    default: false
+  },
+  reportGeneratedAt: {
+    type: Date
+  },
   metadata: {
     type: Map,
     of: mongoose.Schema.Types.Mixed
