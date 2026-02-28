@@ -3,9 +3,11 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPinIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
+import useSocket from '../hooks/useSocket';
 
 const TouristMonitoring = () => {
   const { apiRequest } = useAuth();
+  const { subscribe, unsubscribe } = useSocket();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tourists, setTourists] = useState([]);
@@ -27,8 +29,17 @@ const TouristMonitoring = () => {
 
   useEffect(() => {
     fetchTourists();
-    const id = setInterval(fetchTourists, 30000);
-    return () => clearInterval(id);
+
+    // Live location updates via WebSocket — no polling needed
+    const handleLocationUpdate = (tourist) => {
+      setTourists(prev =>
+        prev.map(t => (t.id === tourist.id || t._id === tourist._id ? { ...t, ...tourist } : t))
+      );
+      setSummary(prev => prev ? { ...prev } : prev);
+    };
+
+    subscribe('tourist:location', handleLocationUpdate);
+    return () => unsubscribe('tourist:location', handleLocationUpdate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

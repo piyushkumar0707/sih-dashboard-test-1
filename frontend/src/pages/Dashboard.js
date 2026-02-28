@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import useSocket from '../hooks/useSocket';
 import {
   UsersIcon,
   ExclamationTriangleIcon,
@@ -27,8 +28,12 @@ const Dashboard = () => {
   });
 
   const [recentIncidents, setRecentIncidents] = useState([]);
-
   const [systemHealth, setSystemHealth] = useState([]);
+
+  // WebSocket real-time alerts
+  const { subscribe, unsubscribe } = useSocket();
+  const [panicAlert, setPanicAlert] = useState(null);   // { name, location, incidentId }
+  const [geofenceToast, setGeofenceToast] = useState(null); // { zone, touristId }
 
   const isTourist = user?.role === 'tourist';
 
@@ -63,13 +68,58 @@ const Dashboard = () => {
     fetchDashboardStats();
     fetchIncidents();
     fetchSystemHealth();
-    // Optionally, set up polling for real-time updates
-    const interval = setInterval(() => {
-      fetchDashboardStats();
-      fetchIncidents();
-      fetchSystemHealth();
-    }, 30000);
-    return () => clearInterval(interval);
+
+    // ---- WebSocket real-time subscriptions ----
+
+    // 3.4  Panic alert banner
+    // Server emits: { incident: { incidentId, location, tourist (username), ... }, tourist: { name, touristId, ... } }
+    const handlePanic = (data) => {
+      setPanicAlert({
+        name: data.tourist?.name || data.tourist?.username || data.incident?.tourist || 'Unknown',
+        location: data.incident?.location || 'Unknown location',
+        incidentId: data.incident?.incidentId || data.incident?._id || null,
+      });
+    };
+
+    // 3.5  Geofence alert toast (auto-dismiss after 6 s)
+    // Server emits: { tourist: { touristId, name, ... }, alert: '<message string>' }
+    const handleGeofence = (data) => {
+      setGeofenceToast({
+        zone: data.alert || data.zoneName || data.zone || 'Geofence violated',
+        touristId: data.tourist?.touristId || data.tourist?.name || data.touristId || 'Unknown',
+      });
+      setTimeout(() => setGeofenceToast(null), 6000);
+    };
+
+    // 3.6  Stats auto-refresh
+    const handleIncidentCreated = (incident) => {
+      setStats(prev => ({ ...prev, openIncidents: (prev.openIncidents || 0) + 1 }));
+      setRecentIncidents(prev => [
+        { ...incident, time: incident.createdAt ? new Date(incident.createdAt).toLocaleString() : '' },
+        ...prev.slice(0, 19),
+      ]);
+    };
+
+    const handleTouristLocation = (tourist) => {
+      // Re-derive activeTourists count when status changes
+      if (tourist.status === 'active') {
+        setStats(prev => ({ ...prev, activeTourists: (prev.activeTourists || 0) + (tourist._new ? 1 : 0) }));
+      }
+    };
+
+    subscribe('alert:panic', handlePanic);
+    subscribe('alert:geofence', handleGeofence);
+    subscribe('incident:created', handleIncidentCreated);
+    subscribe('tourist:location', handleTouristLocation);
+
+    return () => {
+      unsubscribe('alert:panic', handlePanic);
+      unsubscribe('alert:geofence', handleGeofence);
+      unsubscribe('incident:created', handleIncidentCreated);
+      unsubscribe('tourist:location', handleTouristLocation);
+    };
+    // subscribe/unsubscribe are stable (ref-backed) — safe to omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiRequest]);
 
   const StatCard = ({ title, value, change, changeType, icon: Icon, color }) => (
@@ -116,6 +166,51 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* 3.4 — Panic alert banner */}
+      {panicAlert && (
+        <div className="flex items-center justify-between w-full bg-red-600 text-white px-5 py-4 rounded-xl shadow-lg">
+          <div className="flex items-center space-x-3">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <div>
+              <span className="font-bold text-lg">PANIC ALERT — </span>
+              <span className="font-medium">{panicAlert.name}</span>
+              <span className="mx-2">·</span>
+              <span className="text-red-100">{panicAlert.location}</span>
+              {panicAlert.incidentId && (
+                <span className="ml-3 text-xs bg-red-800 px-2 py-0.5 rounded">
+                  Incident #{String(panicAlert.incidentId).slice(-6)}
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setPanicAlert(null)}
+            className="ml-4 text-red-100 hover:text-white text-2xl leading-none font-bold"
+            aria-label="Dismiss panic alert"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
+      {/* 3.5 — Geofence alert toast (fixed top-right) */}
+      {geofenceToast && (
+        <div className="fixed top-5 right-5 z-50 bg-yellow-500 text-white px-5 py-4 rounded-xl shadow-2xl max-w-xs flex items-start space-x-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <div className="flex-1">
+            <p className="font-bold text-sm">Geofence Violation</p>
+            <p className="text-xs text-yellow-100 mt-0.5">Zone: {geofenceToast.zone}</p>
+            <p className="text-xs text-yellow-100">Tourist: {geofenceToast.touristId}</p>
+          </div>
+          <button onClick={() => setGeofenceToast(null)} className="text-yellow-100 hover:text-white text-lg leading-none font-bold">&times;</button>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">

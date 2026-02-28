@@ -10,7 +10,9 @@ const userSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false },
   location: { type: String, default: 'Unknown' },
   lastActive: { type: Date, default: Date.now },
-  joinedDate: { type: Date, default: Date.now }
+  joinedDate: { type: Date, default: Date.now },
+  fcmToken: { type: String, default: null },
+  emergencyContact: { type: String, default: null }
 }, {
   timestamps: true
 });

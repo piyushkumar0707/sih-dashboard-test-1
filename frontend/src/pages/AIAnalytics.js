@@ -5,7 +5,13 @@ const AIAnalytics = () => {
   const { apiRequest } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [telemetryData, setTelemetryData] = useState({ geofenceRisk: 1, anomalies: 0 });
+  const [telemetryData, setTelemetryData] = useState({
+    geofenceRisk: 1,
+    anomalies: 0,
+    movementSpeedKmh: 4,
+    historicalIncidentsNearby: 0,
+    timeOfDay: new Date().getHours()
+  });
 
   const handleCalculateSafety = async () => {
     setLoading(true);
@@ -14,7 +20,10 @@ const AIAnalytics = () => {
       body: JSON.stringify({
         telemetry: { heartRate: 85, movement: 'walking' },
         geofenceRisk: telemetryData.geofenceRisk,
-        anomalies: telemetryData.anomalies
+        anomalies: telemetryData.anomalies,
+        movementSpeedKmh: telemetryData.movementSpeedKmh,
+        historicalIncidentsNearby: telemetryData.historicalIncidentsNearby,
+        timeOfDay: telemetryData.timeOfDay
       })
     });
     if (resp.data && !resp.error) {
@@ -28,6 +37,7 @@ const AIAnalytics = () => {
     avgSafetyScore: 0,
     predictedRisks: 0,
     anomaliesDetected: 0,
+    highRisk: 0,
     aiAccuracy: 0
   });
   const [trends, setTrends] = useState([]);
@@ -73,6 +83,10 @@ const AIAnalytics = () => {
           <p className="text-3xl font-bold text-gray-900">{metrics.anomaliesDetected}</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <p className="text-sm text-gray-600">High Risk Tourists</p>
+          <p className="text-3xl font-bold text-red-600">{metrics.highRisk ?? 0}</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <p className="text-sm text-gray-600">AI Accuracy</p>
           <p className="text-3xl font-bold text-gray-900">{metrics.aiAccuracy}%</p>
         </div>
@@ -85,21 +99,73 @@ const AIAnalytics = () => {
             <p className="text-sm text-gray-600">Test AI safety score calculation</p>
           </div>
           <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">Geofence Risk (1-10)</label>
-              <input type="number" min="1" max="10" value={telemetryData.geofenceRisk} onChange={e => setTelemetryData(d => ({ ...d, geofenceRisk: parseInt(e.target.value) || 1 }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Geofence Risk (0-10)</label>
+                <input type="number" min="0" max="10" value={telemetryData.geofenceRisk}
+                  onChange={e => setTelemetryData(d => ({ ...d, geofenceRisk: parseFloat(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Anomalies (0-5)</label>
+                <input type="number" min="0" max="5" value={telemetryData.anomalies}
+                  onChange={e => setTelemetryData(d => ({ ...d, anomalies: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Speed (km/h)</label>
+                <input type="number" min="0" max="120" step="0.5" value={telemetryData.movementSpeedKmh}
+                  onChange={e => setTelemetryData(d => ({ ...d, movementSpeedKmh: parseFloat(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Incidents Nearby</label>
+                <input type="number" min="0" value={telemetryData.historicalIncidentsNearby}
+                  onChange={e => setTelemetryData(d => ({ ...d, historicalIncidentsNearby: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Hour of Day (0-23)</label>
+                <input type="number" min="0" max="23" value={telemetryData.timeOfDay}
+                  onChange={e => setTelemetryData(d => ({ ...d, timeOfDay: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">Anomalies Count</label>
-              <input type="number" min="0" value={telemetryData.anomalies} onChange={e => setTelemetryData(d => ({ ...d, anomalies: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-            </div>
-            <button onClick={handleCalculateSafety} disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">{loading ? 'Calculating...' : 'Calculate Safety Score'}</button>
+            <button onClick={handleCalculateSafety} disabled={loading}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              {loading ? 'Calculating...' : 'Calculate Safety Score'}
+            </button>
             {result && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg font-semibold">Safety Score: {result.safetyScore || 0}</div>
-                {result.factors && (
-                  <div className="text-sm text-gray-600 mt-1">Factors: Geofence Risk: {result.factors.geofenceRisk || 0}, Anomalies: {result.factors.anomalies || 0}</div>
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold">Safety Score</span>
+                  <span className="text-2xl font-bold text-blue-700">{result.safetyScore ?? 0}</span>
+                </div>
+                {result.risk_level && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Risk Level</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      result.risk_level === 'danger' ? 'bg-red-100 text-red-700'
+                      : result.risk_level === 'warning' ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-green-100 text-green-700'
+                    }`}>{result.risk_level}</span>
+                  </div>
                 )}
+                {result.confidence !== undefined && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Confidence</span>
+                    <span className="text-sm font-medium">{(result.confidence * 100).toFixed(1)}%</span>
+                  </div>
+                )}
+                {result.anomaly_flags && result.anomaly_flags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-semibold text-red-600 mb-1">⚠ Anomaly Flags:</p>
+                    {result.anomaly_flags.map((flag, i) => (
+                      <p key={i} className="text-xs text-red-500">{flag}</p>
+                    ))}
+                  </div>
+                )}
+                <div className="text-xs text-gray-400">Model: {result.model || 'unknown'}</div>
               </div>
             )}
           </div>

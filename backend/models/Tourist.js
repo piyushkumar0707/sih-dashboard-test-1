@@ -43,7 +43,15 @@ const touristSchema = new mongoose.Schema({
   },
   emergencyContact: {
     name: String,
-    phone: String
+    phone: String,
+    email: String
+  },
+  scoreHistory: {
+    type: [{
+      score: { type: Number },
+      timestamp: { type: Date, default: Date.now }
+    }],
+    default: []
   },
   metadata: {
     type: Map,
@@ -74,10 +82,13 @@ touristSchema.methods.updateSafetyScore = function(score) {
   // Automatically update status based on score
   if (this.safetyScore < 50) {
     this.status = 'high-risk';
-  } else if (this.safetyScore < 70) {
-    this.status = 'active';
   } else {
     this.status = 'active';
+  }
+  // Append to history, keep last 24 entries
+  this.scoreHistory.push({ score: this.safetyScore, timestamp: new Date() });
+  if (this.scoreHistory.length > 24) {
+    this.scoreHistory = this.scoreHistory.slice(-24);
   }
   return this.save();
 };

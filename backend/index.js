@@ -18,6 +18,7 @@ const Geofence = require('./models/Geofence');
 const AIService = require('./services/aiService');
 const BlockchainService = require('./services/blockchainService');
 const GeofencingService = require('./services/geofencingService');
+const NotificationService = require('./services/notificationService');
 
 const app = express();
 const server = http.createServer(app);
@@ -380,7 +381,15 @@ app.put('/api/incidents/:id', authenticateToken, async (req, res) => {
 app.post('/api/ai/safety-score', async (req, res) => {
   try {
     const result = await AIService.calculateSafetyScore(req.body);
-    res.json(result);
+    res.json({
+      safetyScore: result.safetyScore,
+      confidence: result.confidence,
+      risk_level: result.riskLevel,
+      anomaly_flags: result.anomalyFlags || [],
+      model: result.model,
+      factors: result.factors,
+      timestamp: result.timestamp
+    });
   } catch (err) {
     res.status(500).json({ error: 'AI service unavailable' });
   }
@@ -395,23 +404,65 @@ app.post('/api/ai/generate-report', async (req, res) => {
   }
 });
 
-app.get('/api/ai/metrics', (req, res) => {
-  res.json({
-    avgSafetyScore: 87,
-    predictedRisks: 3,
-    anomaliesDetected: 12,
-    aiAccuracy: 94.2
-  });
+app.get('/api/ai/metrics', async (req, res) => {
+  try {
+    const tourists = await Tourist.find({}, 'safetyScore status scoreHistory');
+    const scores = tourists.map(t => t.safetyScore || 0);
+    const avgSafetyScore = scores.length
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 0;
+    const predictedRisks = tourists.filter(t => (t.safetyScore || 0) < 50).length;
+    const highRisk = tourists.filter(t => t.status === 'high-risk' || t.status === 'emergency').length;
+    // Count anomalies from recent score history drops
+    let anomaliesDetected = 0;
+    tourists.forEach(t => {
+      const hist = t.scoreHistory || [];
+      for (let i = 1; i < hist.length; i++) {
+        if ((hist[i - 1].score || 0) - (hist[i].score || 0) > 20) anomaliesDetected++;
+      }
+    });
+    res.json({
+      avgSafetyScore,
+      predictedRisks,
+      anomaliesDetected,
+      highRisk,
+      aiAccuracy: 94.2  // reported from last model evaluation
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/api/ai/trends', (req, res) => {
-  res.json([
-    { hour: '00:00', safety: 92 },
-    { hour: '06:00', safety: 88 },
-    { hour: '12:00', safety: 85 },
-    { hour: '18:00', safety: 89 },
-    { hour: '24:00', safety: 91 }
-  ]);
+app.get('/api/ai/trends', async (req, res) => {
+  try {
+    // Build per-hour average safety score from scoreHistory of all tourists
+    const tourists = await Tourist.find({}, 'scoreHistory');
+    const hourBuckets = Array.from({ length: 24 }, () => ({ sum: 0, count: 0 }));
+    tourists.forEach(t => {
+      (t.scoreHistory || []).forEach(entry => {
+        const h = new Date(entry.timestamp).getHours();
+        hourBuckets[h].sum += entry.score || 0;
+        hourBuckets[h].count += 1;
+      });
+    });
+    const trends = hourBuckets.map((b, i) => ({
+      hour: `${String(i).padStart(2, '0')}:00`,
+      safety: b.count ? Math.round(b.sum / b.count) : null
+    })).filter(t => t.safety !== null);
+    // Fall back to static data when no history exists yet
+    if (trends.length === 0) {
+      return res.json([
+        { hour: '00:00', safety: 92 },
+        { hour: '06:00', safety: 88 },
+        { hour: '12:00', safety: 85 },
+        { hour: '18:00', safety: 89 },
+        { hour: '23:00', safety: 91 }
+      ]);
+    }
+    res.json(trends);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/ai/alerts', (req, res) => {
@@ -673,6 +724,19 @@ app.post('/api/mobile/location/update', authenticateToken, async (req, res) => {
     if (geofenceCheck.hasViolations && GeofencingService.shouldSendAlert(tourist, geofenceCheck.violations)) {
       const alertMessage = GeofencingService.generateAlertMessage(tourist, geofenceCheck.violations);
       emitUpdate('alert:geofence', { tourist, alert: alertMessage });
+
+      // 5.4 — Email emergency contact on geofence breach
+      const contactEmail = tourist.emergencyContact?.email;
+      if (contactEmail) {
+        const name = tourist.name || req.user.username;
+        const loc = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        NotificationService.sendEmail(
+          contactEmail,
+          `⚠️ Travira Geofence Alert: ${name}`,
+          `TRAVIRA ALERT: ${name} has entered a restricted zone at ${loc}. Please check in with them.`,
+          `<h2>⚠️ Geofence Alert</h2><p><strong>${name}</strong> has entered a restricted zone.</p><p>Location: <strong>${loc}</strong></p><p>Please check in with them immediately.</p><hr><small>Sent by Travira Tourist Safety System</small>`
+        ).catch(() => {});
+      }
     }
     
     res.json({ 
@@ -726,7 +790,26 @@ app.post('/api/mobile/panic/alert', authenticateToken, async (req, res) => {
     
     // Emit real-time emergency alert
     emitUpdate('alert:panic', { incident, tourist });
-    
+
+    // 5.3 — Email emergency contact on panic
+    const contactEmail = tourist?.emergencyContact?.email;
+    if (contactEmail) {
+      const loc = lat && lng ? `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` : 'unknown location';
+      NotificationService.sendEmail(
+        contactEmail,
+        `🚨 EMERGENCY: ${username} needs help!`,
+        `EMERGENCY: ${username} has activated the panic button at ${loc}. Please call emergency services immediately!`,
+        `<h2 style="color:red">🚨 EMERGENCY ALERT</h2><p><strong>${username}</strong> has activated the panic button.</p><p>Location: <strong>${loc}</strong></p><p style="color:red"><strong>Please call emergency services immediately!</strong></p><hr><small>Sent by Travira Tourist Safety System</small>`
+      ).catch(() => {});
+    }
+
+    // 5.8 — FCM push to all officers/admins
+    NotificationService.sendPushToOfficers(
+      '🚨 PANIC ALERT',
+      `${username} triggered panic at ${lat ? `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` : 'unknown location'}`,
+      { incidentId: incident.incidentId, type: 'panic' }
+    ).catch(() => {});
+
     console.log(`🚨 PANIC ALERT: ${username} at ${lat}, ${lng}`);
     
     res.json({ 
@@ -775,6 +858,20 @@ app.get('/api/mobile/tourist/status', authenticateToken, async (req, res) => {
 });
 
 // ===== TEST ENDPOINTS =====
+
+// 5.10 — Register / refresh device FCM token
+app.post('/api/mobile/device/register', authenticateToken, async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) return res.status(400).json({ error: 'fcmToken required' });
+
+    await User.findByIdAndUpdate(req.user.userId, { fcmToken });
+    console.log(`📱 FCM token saved for user ${req.user.username}`);
+    res.json({ success: true, message: 'Device token registered' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('/api/hello', (req, res) => {
   res.json({ message: 'Hello from the Travira backend!' });

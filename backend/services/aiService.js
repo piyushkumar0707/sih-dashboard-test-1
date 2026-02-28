@@ -19,12 +19,18 @@ class AIService {
     const geofenceRisk = data?.geofenceRisk || 1;
     const anomalies = data?.anomalies || 0;
     const telemetry = data?.telemetry || {};
+    const movementSpeedKmh = data?.movementSpeedKmh || telemetry?.movement_speed_kmh || 4;
+    const historicalIncidentsNearby = data?.historicalIncidentsNearby || 0;
+    const timeOfDay = data?.timeOfDay != null ? data.timeOfDay : new Date().getHours();
     
     try {
       const response = await axios.post(`${AI_SAFETY_SCORE_URL}/calculate`, {
         telemetry: telemetry,
         geofence_risk: geofenceRisk,
-        anomalies: anomalies
+        anomalies: anomalies,
+        movement_speed_kmh: movementSpeedKmh,
+        historical_incidents_nearby: historicalIncidentsNearby,
+        time_of_day: timeOfDay
       }, {
         timeout: 45000  // 45 seconds to allow for service wake-up from sleep
       });
@@ -32,6 +38,10 @@ class AIService {
       return {
         success: true,
         safetyScore: response.data.safety_score,
+        confidence: response.data.confidence,
+        riskLevel: response.data.risk_level,
+        anomalyFlags: response.data.anomaly_flags || [],
+        model: response.data.model,
         factors: {
           geofenceRisk: geofenceRisk,
           anomalies: anomalies
@@ -40,8 +50,6 @@ class AIService {
       };
     } catch (error) {
       console.error('AI Safety Score Service Error:', error.message);
-      // Calculate fallback score based on input when service is unavailable
-      
       // Simple fallback calculation: Base 100, subtract risk factors
       const calculatedScore = Math.max(0, Math.min(100, 
         100 - (geofenceRisk * 5) - (anomalies * 3)
@@ -50,6 +58,10 @@ class AIService {
       return {
         success: false,
         safetyScore: calculatedScore,
+        confidence: 0,
+        riskLevel: calculatedScore >= 70 ? 'safe' : calculatedScore >= 40 ? 'warning' : 'danger',
+        anomalyFlags: [],
+        model: 'fallback',
         factors: {
           geofenceRisk: geofenceRisk,
           anomalies: anomalies

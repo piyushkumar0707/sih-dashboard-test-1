@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import useSocket from '../hooks/useSocket';
 
 const IncidentManagement = () => {
   const { apiRequest } = useAuth();
+  const { subscribe, unsubscribe } = useSocket();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [incidents, setIncidents] = useState([]);
@@ -27,8 +29,32 @@ const IncidentManagement = () => {
 
   useEffect(() => {
     fetchIncidents();
-    const interval = setInterval(fetchIncidents, 10000); // Poll every 10 seconds
-    return () => clearInterval(interval);
+
+    // Live updates via WebSocket
+    const handleCreated = (incident) => {
+      setIncidents(prev => {
+        // Only prepend if the incident passes the active filters
+        const statusOk = filters.status === 'all' || incident.status === filters.status;
+        const sevOk = filters.severity === 'all' || incident.severity === filters.severity;
+        if (!statusOk || !sevOk) return prev;
+        // Avoid duplicates
+        if (prev.some(i => i.id === incident.id || i._id === incident._id)) return prev;
+        return [{ ...incident }, ...prev];
+      });
+    };
+
+    const handleUpdated = (incident) => {
+      setIncidents(prev =>
+        prev.map(i => (i.id === incident.id || i._id === incident._id ? { ...i, ...incident } : i))
+      );
+    };
+
+    subscribe('incident:created', handleCreated);
+    subscribe('incident:updated', handleUpdated);
+    return () => {
+      unsubscribe('incident:created', handleCreated);
+      unsubscribe('incident:updated', handleUpdated);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.status, filters.severity]);
 
