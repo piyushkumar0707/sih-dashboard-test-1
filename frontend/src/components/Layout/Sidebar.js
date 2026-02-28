@@ -25,6 +25,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { name: 'Tourist Monitoring', href: '/tourists', icon: MapIcon, roles: ['admin', 'officer'] },
     { name: 'Incident Management', href: '/incidents', icon: ExclamationTriangleIcon, roles: ['admin', 'officer', 'tourist'] },
     { name: 'AI Analytics', href: '/ai-analytics', icon: ChartBarIcon, roles: ['admin', 'officer'] },
+    { name: 'Geofence Zones', href: '/geofences', icon: MapIcon, roles: ['admin', 'officer'] },
     { name: 'Blockchain Logs', href: '/blockchain', icon: CubeIcon, roles: ['admin', 'officer'] },
     { name: 'System Health', href: '/system-health', icon: HeartIcon, roles: ['admin', 'officer'] },
     { name: 'Reports', href: '/reports', icon: DocumentTextIcon, roles: ['admin', 'officer'] },

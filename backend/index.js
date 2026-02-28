@@ -552,6 +552,16 @@ app.post('/api/geofences', authenticateToken, requireRole('admin'), async (req, 
   }
 });
 
+app.delete('/api/geofences/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const deleted = await Geofence.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Geofence not found' });
+    res.json({ success: true, message: 'Geofence deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/geofences/check', async (req, res) => {
   try {
     const { lat, lng } = req.body;

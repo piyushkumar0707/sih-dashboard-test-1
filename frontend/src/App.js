@@ -15,6 +15,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import ActivityLog from './pages/ActivityLog';
 import Security from './pages/Security';
+import GeofenceManagement from './pages/GeofenceManagement';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
@@ -48,6 +49,7 @@ function AppContent() {
             <Route path="/tourists" element={<TouristMonitoring />} />
             <Route path="/incidents" element={<IncidentManagement />} />
             <Route path="/ai-analytics" element={<AIAnalytics />} />
+            <Route path="/geofences" element={<GeofenceManagement />} />
             <Route path="/blockchain" element={<BlockchainLogs />} />
             <Route path="/system-health" element={<SystemHealth />} />
             <Route path="/reports" element={<Reports />} />
