@@ -39,14 +39,14 @@ const IncidentManagement = () => {
         const sevOk = filters.severity === 'all' || incident.severity === filters.severity;
         if (!statusOk || !sevOk) return prev;
         // Avoid duplicates
-        if (prev.some(i => i.id === incident.id || i._id === incident._id)) return prev;
+        if (prev.some(i => i.incidentId === incident.incidentId)) return prev;
         return [{ ...incident }, ...prev];
       });
     };
 
     const handleUpdated = (incident) => {
       setIncidents(prev =>
-        prev.map(i => (i.id === incident.id || i._id === incident._id ? { ...i, ...incident } : i))
+        prev.map(i => (i.incidentId === incident.incidentId ? { ...i, ...incident } : i))
       );
     };
 
@@ -75,9 +75,10 @@ const IncidentManagement = () => {
   };
 
   const handleGenerateReport = async (inc) => {
-    setGeneratingReport(inc.id);
+    const incId = inc.incidentId;
+    setGeneratingReport(incId);
     try {
-      const result = await apiRequest(`/api/incidents/${inc.id}/generate-report`, { method: 'POST' });
+      const result = await apiRequest(`/api/incidents/${incId}/generate-report`, { method: 'POST' });
       if (result.error) {
         alert(`Failed to generate E-FIR: ${result.error}`);
         return;
@@ -90,17 +91,17 @@ const IncidentManagement = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${fir_number || inc.id}-EFIR.pdf`;
+      a.download = `${fir_number || incId}-EFIR.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       // Reflect reportGenerated locally
-      setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, reportGenerated: true } : i));
+      setIncidents(prev => prev.map(i => i.incidentId === incId ? { ...i, reportGenerated: true } : i));
     } catch (e) {
       alert('Report generation failed. Is the case report service running?');
     } finally {
-      setGeneratingReport(null);
+      setGeneratingReport(null); // eslint-disable-line
     }
   };
 
@@ -158,12 +159,12 @@ const IncidentManagement = () => {
             ) : (
               <div className="space-y-3">
                 {filtered.map(inc => (
-                  <div key={inc.id} className="p-4 border border-gray-200 rounded-lg">
+                  <div key={inc.incidentId || inc._id} className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-center justify-between">
-                      <div className="font-medium text-gray-900">{inc.type} <span className="text-gray-500">({inc.id})</span></div>
+                      <div className="font-medium text-gray-900">{inc.type} <span className="text-gray-500">({inc.incidentId})</span></div>
                       <select
                         value={inc.severity}
-                        onChange={e => handleUpdateIncident(inc.id, { severity: e.target.value })}
+                        onChange={e => handleUpdateIncident(inc.incidentId, { severity: e.target.value })}
                         className={`px-2 py-1 rounded-full text-xs font-medium border ${
                           inc.severity === 'High' ? 'text-red-700 bg-red-100' : inc.severity === 'Medium' ? 'text-yellow-700 bg-yellow-100' : 'text-green-700 bg-green-100'
                         }`}
@@ -178,7 +179,7 @@ const IncidentManagement = () => {
                       <span>Status:</span>
                       <select
                         value={inc.status}
-                        onChange={e => handleUpdateIncident(inc.id, { status: e.target.value })}
+                        onChange={e => handleUpdateIncident(inc.incidentId, { status: e.target.value })}
                         className="border rounded px-1 py-0.5 text-xs"
                       >
                         <option>Open</option>
@@ -192,10 +193,10 @@ const IncidentManagement = () => {
                     <div className="mt-3 flex items-center space-x-2">
                       <button
                         onClick={() => handleGenerateReport(inc)}
-                        disabled={generatingReport === inc.id}
+                        disabled={generatingReport === inc.incidentId}
                         className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                       >
-                        {generatingReport === inc.id ? (
+                        {generatingReport === inc.incidentId ? (
                           <><span className="animate-spin mr-1.5">⏳</span>Generating...</>
                         ) : (
                           <><span className="mr-1.5">📄</span>Generate E-FIR</>
@@ -219,7 +220,17 @@ const IncidentManagement = () => {
           <form onSubmit={handleCreateIncident} className="mt-4 space-y-3">
             <div>
               <label className="block text-sm text-gray-700 mb-1">Type</label>
-              <input value={newIncident.type} onChange={e => setNewIncident(i => ({ ...i, type: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required />
+              <select value={newIncident.type} onChange={e => setNewIncident(i => ({ ...i, type: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required>
+                <option value="">Select type...</option>
+                <option>Medical Emergency</option>
+                <option>Lost Tourist</option>
+                <option>Emergency Alert</option>
+                <option>Security Threat</option>
+                <option>Natural Disaster</option>
+                <option>Accident</option>
+                <option>Theft</option>
+                <option>Other</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Location</label>

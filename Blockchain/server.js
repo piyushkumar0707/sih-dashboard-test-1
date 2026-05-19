@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
   res.send("Credential Registry API is running!");
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = 4000;
 
 // Paths
 const deployedFile = path.join(__dirname, "scripts", "deployedAddresses.json");

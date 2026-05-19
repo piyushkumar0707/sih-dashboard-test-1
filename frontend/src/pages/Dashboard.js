@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import useSocket from '../hooks/useSocket';
 import {
@@ -14,6 +15,7 @@ import {
 
 const Dashboard = () => {
   const { apiRequest, user } = useAuth();
+  const navigate = useNavigate();
 
   const [stats, setStats] = useState({
     activeTourists: 245,
@@ -377,19 +379,19 @@ const Dashboard = () => {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="flex items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200">
+            <button onClick={() => navigate('/users')} className="flex items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200">
               <div className="text-center">
                 <UsersIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                 <span className="text-sm font-medium text-blue-900">Add New User</span>
               </div>
             </button>
-            <button className="flex items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200">
+            <button onClick={() => navigate('/incidents')} className="flex items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200">
               <div className="text-center">
                 <ExclamationTriangleIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
                 <span className="text-sm font-medium text-green-900">Create Incident</span>
               </div>
             </button>
-            <button className="flex items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors duration-200">
+            <button onClick={() => navigate('/geofences')} className="flex items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors duration-200">
               <div className="text-center">
                 <MapPinIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
                 <span className="text-sm font-medium text-purple-900">Update Geofences</span>

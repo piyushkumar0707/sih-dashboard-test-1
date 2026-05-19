@@ -18,11 +18,13 @@ import Security from './pages/Security';
 import GeofenceManagement from './pages/GeofenceManagement';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LandingPage from './pages/LandingPage';
 import './App.css';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
 
   if (loading) {
     return (
@@ -33,7 +35,8 @@ function AppContent() {
   }
 
   if (!user) {
-    return <Login />;
+    if (showLogin) return <Login />;
+    return <LandingPage onLogin={() => setShowLogin(true)} />;
   }
 
   return (

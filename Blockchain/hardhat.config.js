@@ -9,7 +9,7 @@ module.exports = {
     amoy: {
       url: process.env.ALCHEMY_AMOY_URL, // 👈 must match your .env
       accounts: [process.env.PRIVATE_KEY],
-      chainId: 80002, // Polygon Amoy chain ID
+      chainId: 31337, // Local hardhat chain ID
     },
     hardhat: {},
   },

@@ -80,18 +80,30 @@ class AIService {
   static async generateIncidentReport(incidentData) {
     try {
       const response = await axios.post(`${AI_CASE_REPORT_URL}/report`, {
-        tourist_id: incidentData.touristId,
-        alert: incidentData.type || 'Incident',
-        last_location: incidentData.location || 'Unknown'
+        incident_id:          incidentData.incident_id || incidentData.incidentId || `INC-${Date.now()}`,
+        type:                 incidentData.type || 'Other',
+        location:             incidentData.location || 'Unknown',
+        severity:             incidentData.severity || 'Low',
+        description:          incidentData.description || 'No description provided.',
+        tourist_name:         incidentData.tourist_name || incidentData.tourist || 'Unknown',
+        tourist_id:           incidentData.tourist_id || incidentData.touristId || '-',
+        officer_name:         incidentData.officer_name || incidentData.assignedOfficer || 'Unassigned',
+        timestamp:            incidentData.timestamp || new Date().toISOString(),
+        safety_score_at_time: incidentData.safety_score_at_time ?? null,
+        coordinates:          incidentData.coordinates || null,
+        blockchain_hash:      incidentData.blockchain_hash || incidentData.blockchainHash || null,
+        status:               incidentData.status || 'Open',
       }, {
-        timeout: 45000  // 45 seconds to allow for service wake-up from sleep
+        timeout: 45000
       });
-      
+
       return {
         success: true,
         status: response.data.status,
-        filename: response.data.file,
-        reportId: `report_${Date.now()}`,
+        pdf_base64: response.data.pdf_base64,
+        fir_number: response.data.fir_number,
+        incident_id: response.data.incident_id,
+        generated_at: response.data.generated_at,
         timestamp: new Date()
       };
     } catch (error) {

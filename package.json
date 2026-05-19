@@ -7,7 +7,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.19.0",
-    "mongoose": "^8.18.0"
+    "mongoose": "^8.18.0",
+    "repomix": "^1.12.0"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
