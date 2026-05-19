@@ -6,7 +6,7 @@ let socketInstance = null;
 
 const getSocket = () => {
   if (!socketInstance) {
-    socketInstance = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+    socketInstance = io(process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000', {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
