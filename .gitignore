@@ -171,7 +171,7 @@ start-all.sh
 
 # ── Frontend deployment config ───────────────────────────────
 vercel.json
-frontend/vercel.json
+# frontend/vercel.json is intentionally tracked (Vercel SPA routing)
 frontend/.vercel/
 
 # ── Legacy / duplicate server files ──────────────────────────

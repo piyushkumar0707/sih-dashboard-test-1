@@ -1,5 +1,5 @@
-// Load environment variables
-require('dotenv').config({ path: '../.env' });
+// Load environment variables (local dev only; Railway injects env vars natively)
+require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
