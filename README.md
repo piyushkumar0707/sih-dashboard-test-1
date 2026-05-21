@@ -8,8 +8,10 @@
 
 > A comprehensive AI-powered safety monitoring and incident management system for the tourism sector, providing real-time dashboards, tourist tracking, AI analytics, and blockchain-secured logging.
 
-### 🌍 Live Demo of the Prototype 
-- **GitHub Repository**: [https://github.com/piyushkumar0707/sih-dashboard-test-1/raw/refs/heads/main/WhatsApp%20Video%202025-10-06%20at%2015.54.43.mp4](https://github.com/piyushkumar0707/sih-dashboard-test-1/raw/refs/heads/main/WhatsApp%20Video%202025-10-06%20at%2015.54.43.mp4)
+### 🌍 Live Demo & Repository
+- **Live Platform URL**: [https://travira-iota.vercel.app/](https://travira-iota.vercel.app/)
+- **Demo Video Walkthrough**: [Watch Video on GitHub](https://github.com/piyushkumar0707/sih-dashboard-test-1/raw/refs/heads/main/WhatsApp%20Video%202025-10-06%20at%2015.54.43.mp4)
+
 
 - ## 🎯 Project Overview
 
@@ -176,16 +178,16 @@ npm start
 
 #### 4. AI Services Setup
 ```bash
-# Setup Case Report Service
-cd AI_services/case_report
+# Setup Safety Score Service
+cd AI_services/safety_score
 pip install -r requirements.txt
-python main.py
+uvicorn main:app --reload --port 8001
 # Service runs on http://localhost:8001
 
-# Setup Safety Score Service (in new terminal)
-cd ../safety_score
+# Setup Case Report Service (in new terminal)
+cd ../case_report
 pip install -r requirements.txt
-python main.py
+uvicorn main:app --reload --port 8002
 # Service runs on http://localhost:8002
 ```
 
@@ -212,8 +214,8 @@ PORT=5000
 NODE_ENV=development
 
 # AI Services URLs
-SAFETY_SCORE_SERVICE_URL=http://localhost:8002
-CASE_REPORT_SERVICE_URL=http://localhost:8001
+AI_SAFETY_SCORE_URL=http://localhost:8001
+AI_CASE_REPORT_URL=http://localhost:8002
 ```
 
 #### Frontend Environment Variables
