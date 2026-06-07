@@ -864,13 +864,12 @@ function DemoPanel({ onLogin }) {
             <button className="btn-amber" onClick={onLogin}>
               ▸ ENTER DASHBOARD
             </button>
-            <a
-              href="https://travira-iota.vercel.app/"
-              target="_blank" rel="noreferrer"
+            <button
+              onClick={onLogin}
               className="btn-outline"
             >
               LIVE DEMO ↗
-            </a>
+            </button>
           </div>
           <p className="demo-access-note">
             <span>NOTE:</span> Demo data resets every 24h. Blockchain logs
@@ -1250,13 +1249,13 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           <div className="footer-links">
-            <a
-              href="https://travira-iota.vercel.app/"
-              target="_blank" rel="noreferrer"
+            <button
+              onClick={onLogin}
               className="footer-link"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
             >
               ↗ LIVE DEMO
-            </a>
+            </button>
             <a
               href="https://github.com/piyushkumar0707/sih-dashboard-test-1"
               target="_blank" rel="noreferrer"
