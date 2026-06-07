@@ -987,9 +987,7 @@ export default function LandingPage({ onLogin }) {
             >
               GitHub Repository
             </a>
-            <button onClick={onLogin} className="btn-ghost">
-              Dashboard Login
-            </button>
+
           </div>
 
           <div className="lp-hero-role-bar">
