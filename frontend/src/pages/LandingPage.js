@@ -973,13 +973,12 @@ export default function LandingPage({ onLogin }) {
           </p>
 
           <div className="lp-hero-ctas">
-            <a
-              href="https://travira-iota.vercel.app/"
-              target="_blank" rel="noreferrer"
+            <button
+              onClick={onLogin}
               className="btn-amber"
             >
               ▸ VIEW LIVE DEMO
-            </a>
+            </button>
             <a
               href="https://github.com/piyushkumar0707/sih-dashboard-test-1"
               target="_blank" rel="noreferrer"
