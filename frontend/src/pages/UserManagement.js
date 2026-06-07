@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   UsersIcon,
@@ -73,13 +73,14 @@ const UserManagement = () => {
     password: ''
   });
 
-  // Fetch users from API
-  const fetchUsers = async () => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fetchUsers = useCallback(async () => {
     const result = await apiRequest('/api/users');
     if (result.data && !result.error) {
       setUsers(result.data);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchUsers();

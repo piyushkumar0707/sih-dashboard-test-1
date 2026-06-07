@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-comment-textnodes */
 import React, { useState, useEffect, useRef } from 'react';
 
 /* ─────────────────────────────────────────────────────────────
