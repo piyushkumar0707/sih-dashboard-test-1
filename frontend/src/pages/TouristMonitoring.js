@@ -1,9 +1,41 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { MapPinIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
 import useSocket from '../hooks/useSocket';
+
+// Custom tourist person icon — color-coded by safety score
+const createTouristIcon = (safetyScore, status) => {
+  const isHighRisk = status === 'high-risk' || safetyScore < 70;
+  const isModerate = !isHighRisk && safetyScore < 85;
+  const color = isHighRisk ? '#ef4444' : isModerate ? '#f97316' : '#22c55e';
+  const ring  = isHighRisk ? '#fca5a5' : isModerate ? '#fdba74' : '#86efac';
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
+      <!-- drop shadow -->
+      <ellipse cx="18" cy="42" rx="8" ry="3" fill="rgba(0,0,0,0.18)"/>
+      <!-- pin body -->
+      <path d="M18 2 C9.163 2 2 9.163 2 18 C2 28 18 42 18 42 C18 42 34 28 34 18 C34 9.163 26.837 2 18 2 Z"
+            fill="${color}" stroke="white" stroke-width="2"/>
+      <!-- glow ring -->
+      <circle cx="18" cy="18" r="12" fill="${ring}" opacity="0.4"/>
+      <!-- person head -->
+      <circle cx="18" cy="13" r="4" fill="white"/>
+      <!-- person body -->
+      <path d="M11 26 Q11 20 18 20 Q25 20 25 26" fill="white"/>
+    </svg>`;
+
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [36, 44],
+    iconAnchor: [18, 44],
+    popupAnchor: [0, -44],
+  });
+};
 
 const TouristMonitoring = () => {
   const { apiRequest } = useAuth();
@@ -154,12 +186,28 @@ const TouristMonitoring = () => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             {tourists.filter(t => t.location).map(t => (
-              <Marker key={t.id} position={[t.location.lat, t.location.lng]}>
+              <Marker
+                key={t.id}
+                position={[t.location.lat, t.location.lng]}
+                icon={createTouristIcon(t.safetyScore, t.status)}
+              >
                 <Popup>
-                  <div>
-                    <strong>{t.name}</strong><br />
-                    ID: {t.id}<br />
-                    Safety Score: {t.safetyScore}
+                  <div style={{ minWidth: 140 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>👤 {t.name}</div>
+                    <div style={{ fontSize: 12, color: '#555' }}>ID: <code>{t.id}</code></div>
+                    <div style={{ fontSize: 12, marginTop: 4 }}>
+                      🛡️ Safety Score: <strong style={{ color: t.safetyScore >= 85 ? '#16a34a' : t.safetyScore >= 70 ? '#ea580c' : '#dc2626' }}>{t.safetyScore}</strong>
+                    </div>
+                    <div style={{ fontSize: 12, marginTop: 2 }}>
+                      📍 {t.location.lat.toFixed(4)}, {t.location.lng.toFixed(4)}
+                    </div>
+                    <div style={{ marginTop: 6 }}>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                        background: t.status === 'high-risk' ? '#fee2e2' : '#dcfce7',
+                        color: t.status === 'high-risk' ? '#dc2626' : '#16a34a'
+                      }}>{t.status}</span>
+                    </div>
                   </div>
                 </Popup>
               </Marker>
