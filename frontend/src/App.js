@@ -19,6 +19,7 @@ import GeofenceManagement from './pages/GeofenceManagement';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
+import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 
 /* ── Dashboard shell (authenticated) ─────────────────────────── */
@@ -109,6 +110,7 @@ function App() {
       <Router>
         <AppContent />
       </Router>
+      <Analytics />
     </AuthProvider>
   );
 }
