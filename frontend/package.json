@@ -59,7 +59,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "engines": {
-    "node": "18.x"
+  "overrides": {
+    "ajv": "^8.0.0",
+    "fork-ts-checker-webpack-plugin": {
+      "ajv": "6.12.6"
+    }
   }
 }
