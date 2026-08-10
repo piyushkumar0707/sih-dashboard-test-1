@@ -19,7 +19,6 @@
     }
   ],
   "buildCommand": "npm run build",
-  "outputDirectory": "build",
-  "installCommand": "npm install --force",
-  "framework": "create-react-app"
+  "outputDirectory": "dist",
+  "installCommand": "npm install --legacy-peer-deps"
 }
