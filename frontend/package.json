@@ -58,8 +58,5 @@
   "main": "postcss.config.js",
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "overrides": {
-    "ajv": "^8.0.0"
-  }
+  "license": "ISC"
 }
