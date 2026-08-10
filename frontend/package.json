@@ -61,8 +61,6 @@
   "license": "ISC",
   "overrides": {
     "ajv": "^8.0.0",
-    "fork-ts-checker-webpack-plugin": {
-      "ajv": "6.12.6"
-    }
+    "ajv-keywords": "^5.0.0"
   }
 }
