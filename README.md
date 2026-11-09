@@ -74,39 +74,52 @@ See [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) for service boundaries, trade-off
 ## Checks currently available
 
 - `npm --prefix frontend run build` builds the web frontend.
-- `python AI_services/safety_score/test_model.py` exercises manual scoring scenarios; set a valid bearer token in the script/client when running after service authentication is enabled.
-- The repository does not currently define a backend integration test suite or CI workflow. The frontend `test` script is still a placeholder and is not a test suite.
+- `npm --prefix backend run test:all` runs backend integration and concurrent score-history regression tests against a disposable MongoDB; the integration suite also needs both FastAPI services running.
+- `python -m pytest -q test_api_integration.py` in each `AI_services` directory runs that FastAPI service's auth and validation suite (install `pytest` and `httpx` first).
+- GitHub Actions runs all three suites on push. The frontend `test` script remains a placeholder, not a test suite.
 
 ## Benchmarks
 
-The benchmark uses Node's built-in `fetch`; it logs in once and repeatedly exercises the authenticated location-update endpoint. That path includes MongoDB persistence, geofence evaluation, and the safety-score service. It reports p50/p95/p99 latency, successful requests per second, failures, concurrency, client hardware, and Node version.
+The benchmark is **API-level, local Compose**. It repeatedly exercises authenticated location updates through the Node API, MongoDB persistence, geofence evaluation, and the safety-score service. It does not measure WebSocket delivery or a deployed environment. Each request rotates among the supplied accounts.
 
 ```powershell
-$env:BENCH_USERNAME = 'tourist1'
-$env:BENCH_PASSWORD = 'your-demo-password'
-$env:BENCH_CONCURRENCY = '1'
-$env:BENCH_DURATION_SECONDS = '30'
-npm run bench:location
+# Create at least 20 distinct tourist accounts in the Compose database first.
+$env:BENCH_USERNAMES = (1..20 | ForEach-Object { 'tourist_{0:D2}' -f $_ }) -join ','
+$env:BENCH_PASSWORD = 'the-shared-test-account-password'
+npm run bench:matrix
 ```
 
-### Measured results
+The matrix runs concurrency 1, 5, 10, and 30 three times each for 30 seconds per run. The location-update command supports a single `BENCH_USERNAME` or a comma-separated `BENCH_USERNAMES` list; the matrix command requires at least 20 distinct names. Raw per-run JSON is saved under `benchmarks/`.
 
-The following were run locally against Docker Compose, with an empty geofence collection and one tourist account. Latency percentiles below use successful responses only; the JSON output also reports percentiles across all responses.
+### Measured results: API-level, local Compose
 
-| Run | Test conditions | Requests | Errors | p50 | p95 | p99 | Successful req/s |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2026-11-09 local baseline | 30 s, concurrency 1; Windows 10.0.26300 x64 client, Node v22.19.0, 16 logical cores / 15.25 GiB host memory; Docker Engine 28.5.1 assigned 16 CPUs / 7.38 GiB; backend Node v20.20.2; FastAPI 0.162.2; scikit-learn 1.9.1 | 443 | 0 (0%) | 64.35 ms | 84.20 ms | 100.43 ms | 14.77 |
-| 2026-11-09 same-account diagnostic | 5 s, concurrency 5, same client and Compose stack | 102 | 81 (79.41%) | 233.95 ms | 296.10 ms | 369.71 ms | 4.11 |
+Measured on 2026-11-09 from a Windows_NT 10.0.26300 x64 client (Node v22.19.0, 16 logical CPU cores, 16372613120 bytes RAM), against one local Compose backend instance. Docker Engine 28.5.1 reported 16 CPUs and 7927427072 bytes; backend Node v20.20.2; both FastAPI services 0.162.2; scikit-learn 1.9.1; ReportLab 5.1.0. Twenty distinct tourist accounts were used in every run; the disposable database had no geofences. Percentiles use successful responses only. No deployed run was performed.
 
-The concurrency-5 diagnostic returned HTTP 500 for its 81 failures. The underlying cause has not been isolated; treat that result as a concurrency limitation, not as a capacity claim. This was a local run only; no deployed benchmark was performed.
+| Concurrency | Run | Requests | Errors | Success rate | p50 (ms) | p95 (ms) | p99 (ms) | Successful req/s |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1 | 523 | 0 | 100% | 56.6977999999981 | 61.5317 | 74.8804999999993 | 17.40645787841212 |
+| 1 | 2 | 512 | 0 | 100% | 56.98980000000029 | 69.8393000000001 | 81.50430000000051 | 17.03923599580137 |
+| 1 | 3 | 524 | 0 | 100% | 56.03059999999823 | 64.90509999999995 | 81.57359999999971 | 17.441607263015456 |
+| 5 | 1 | 702 | 0 | 100% | 211.52440000000206 | 263.9419999999991 | 308.5473000000002 | 23.239455489361657 |
+| 5 | 2 | 689 | 0 | 100% | 217.01889999999912 | 270.78689999999915 | 305.83000000000175 | 22.861320103338077 |
+| 5 | 3 | 691 | 0 | 100% | 214.95659999999998 | 269.3617000000013 | 298.8110000000015 | 22.976446943990744 |
+| 10 | 1 | 684 | 0 | 100% | 440.7714999999989 | 540.7574999999997 | 603.4361000000026 | 22.57497058619951 |
+| 10 | 2 | 690 | 0 | 100% | 436.813299999998 | 536.5499999999993 | 601.3221000000012 | 22.730006467246856 |
+| 10 | 3 | 683 | 0 | 100% | 441.3152999999984 | 551.6358 | 593.962300000001 | 22.587110731071487 |
+| 30 | 1 | 688 | 0 | 100% | 1355.6654999999992 | 1749.335000000001 | 1938.8741 | 22.629230494760264 |
+| 30 | 2 | 694 | 0 | 100% | 1347.003 | 1650.4972000000016 | 1849.4457000000002 | 22.604253430642494 |
+| 30 | 3 | 684 | 0 | 100% | 1380.7879000000003 | 1764.7122000000018 | 1909.8804000000018 | 22.242312276445254 |
+
+Raw output for every run: [results-local-compose-2026-11-09.json](benchmarks/results-local-compose-2026-11-09.json).
 
 ## Scope and known limitations
 
 - Safety-score training labels are generated from synthetic rules; model evaluation is not evidence of real-world safety prediction accuracy.
 - Some dashboard analytics and alert content remain demo-oriented. Verify the source data before presenting those panels as operational analytics.
-- Socket.IO broadcasts are process-local and use one staff room; there is no multi-instance adapter or per-tourist subscription model.
+- The benchmark used one backend instance. Socket.IO broadcasts remain in-process and use one staff room; they are not shared across multiple backend instances.
+- JWTs use shared-secret HS256. There is no token revocation or key rotation.
 - Geofence geometry/query consistency and database query performance still need dedicated correctness and load work.
-- There is no automated CI workflow. The current automated coverage is limited, so do not claim measured test coverage or production reliability.
+- The automated suites exercise selected auth, validation, location, scoring, persistence, socket, panic, and concurrency paths; they do not establish production reliability or broad test coverage.
 
 ## Project scripts
 
