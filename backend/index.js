@@ -88,7 +88,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Socket.IO shares the API token and only exposes tracking events to staff.
 io.use((socket, next) => {
-  const { user, error } = verifyBearerToken(socket.handshake.auth?.token);
+  const socketToken = socket.handshake.auth?.token;
+  const { user, error } = verifyBearerToken(socketToken ? `Bearer ${socketToken}` : '', JWT_SECRET);
   if (error) return next(new Error('Unauthorized'));
   if (!['admin', 'officer'].includes(user.role)) return next(new Error('Forbidden'));
   socket.data.user = user;
