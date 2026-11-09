@@ -37,8 +37,7 @@ const AIAnalytics = () => {
     avgSafetyScore: 0,
     predictedRisks: 0,
     anomaliesDetected: 0,
-    highRisk: 0,
-    aiAccuracy: 0
+    highRisk: 0
   });
   const [trends, setTrends] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -85,10 +84,6 @@ const AIAnalytics = () => {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <p className="text-sm text-gray-600">High Risk Tourists</p>
           <p className="text-3xl font-bold text-red-600">{metrics.highRisk ?? 0}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <p className="text-sm text-gray-600">AI Accuracy</p>
-          <p className="text-3xl font-bold text-gray-900">{metrics.aiAccuracy}%</p>
         </div>
       </div>
 

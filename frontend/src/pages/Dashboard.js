@@ -18,15 +18,13 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
-    activeTourists: 245,
-    openIncidents: 7,
-    avgSafetyScore: 87,
-    averageSafetyScore: 87,
-    officersOnDuty: 32,
-    highRiskAreas: 3,
-    incidentsToday: 12,
-    systemUptime: '99.8%',
-    responseTime: '2.3 min'
+    activeTourists: 0,
+    openIncidents: 0,
+    avgSafetyScore: 0,
+    averageSafetyScore: 0,
+    officersOnDuty: 0,
+    highRiskAreas: 0,
+    incidentsToday: 0
   });
 
   const [recentIncidents, setRecentIncidents] = useState([]);
@@ -62,8 +60,7 @@ const Dashboard = () => {
       if (result.data && !result.error && result.data.services) {
         setSystemHealth(result.data.services.map(s => ({
           service: s.name,
-          status: s.status,
-          uptime: s.uptime
+          status: s.status
         })));
       }
     };
@@ -353,7 +350,7 @@ const Dashboard = () => {
                     }`}></div>
                     <span className="text-sm font-medium text-gray-900">{service.service}</span>
                   </div>
-                  <span className="text-xs text-gray-500">{service.uptime}</span>
+                  <span className="text-xs text-gray-500 capitalize">{service.status}</span>
                 </div>
               ))}
             </div>
@@ -363,7 +360,7 @@ const Dashboard = () => {
                 <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
                 <div>
                   <p className="text-sm font-medium text-green-900">System Operational</p>
-                  <p className="text-xs text-green-700">All critical services running normally</p>
+                  <p className="text-xs text-green-700">Current status from the health endpoint</p>
                 </div>
               </div>
             </div>

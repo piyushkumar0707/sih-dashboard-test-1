@@ -61,7 +61,7 @@ const SystemHealth = () => {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Services</h3>
-            <p className="text-sm text-gray-600">Uptime and response times</p>
+            <p className="text-sm text-gray-600">Current dependency status</p>
           </div>
           <div className="p-6">
             {loading ? (
@@ -77,10 +77,7 @@ const SystemHealth = () => {
                         {svc.optional && <span className="ml-2 text-xs text-gray-400">(optional)</span>}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-500 space-x-4">
-                      <span>Uptime: {svc.uptime}</span>
-                      {svc.responseTime && svc.responseTime !== 'N/A' && <span>RT: {svc.responseTime}</span>}
-                    </div>
+                    <span className="text-xs text-gray-500 capitalize">{svc.status}</span>
                   </div>
                 ))}
               </div>
