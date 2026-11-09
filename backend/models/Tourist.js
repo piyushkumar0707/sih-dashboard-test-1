@@ -76,21 +76,19 @@ touristSchema.methods.updateLocation = function(lat, lng, accuracy) {
   return this.save();
 };
 
-// Method to update safety score
+// Update the score and bounded history atomically. Concurrent location requests
+// can hold stale Tourist documents, so saving scoreHistory through document.save()
+// would trigger Mongoose's array version check and reject valid updates.
 touristSchema.methods.updateSafetyScore = function(score) {
-  this.safetyScore = Math.max(0, Math.min(100, score));
-  // Automatically update status based on score
-  if (this.safetyScore < 50) {
-    this.status = 'high-risk';
-  } else {
-    this.status = 'active';
-  }
-  // Append to history, keep last 24 entries
-  this.scoreHistory.push({ score: this.safetyScore, timestamp: new Date() });
-  if (this.scoreHistory.length > 24) {
-    this.scoreHistory = this.scoreHistory.slice(-24);
-  }
-  return this.save();
+  const safeScore = Math.max(0, Math.min(100, score));
+  return this.constructor.findOneAndUpdate(
+    { _id: this._id },
+    {
+      $set: { safetyScore: safeScore, status: safeScore < 50 ? 'high-risk' : 'active' },
+      $push: { scoreHistory: { $each: [{ score: safeScore, timestamp: new Date() }], $slice: -24 } }
+    },
+    { new: true, runValidators: true }
+  );
 };
 
 // Static method to get high-risk tourists

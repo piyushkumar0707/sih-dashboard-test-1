@@ -783,6 +783,9 @@ app.post('/api/mobile/location/update', authenticateToken, validateBody(validato
         lastUpdated: new Date(timestamp || Date.now()),
         accuracy: accuracy || 0
       });
+      // Persist once before AI scoring so concurrent first location updates
+      // share the same tourist record and can use the atomic score updater.
+      await tourist.save();
     } else {
       await tourist.updateLocation(lat, lng, accuracy);
     }
@@ -798,10 +801,8 @@ app.post('/api/mobile/location/update', authenticateToken, validateBody(validato
     }, req.headers.authorization);
     
     if (aiScoreResult.success) {
-      await tourist.updateSafetyScore(aiScoreResult.safetyScore);
+      tourist = await tourist.updateSafetyScore(aiScoreResult.safetyScore);
     }
-    
-    await tourist.save();
     
     // Emit real-time update
     emitUpdate('tourist:location', tourist);
@@ -832,6 +833,7 @@ app.post('/api/mobile/location/update', authenticateToken, validateBody(validato
       geofenceCheck: geofenceCheck.hasViolations ? geofenceCheck : null
     });
   } catch (error) {
+    console.error('Location update failed:', error?.stack || error);
     sendError(res, 500, 'Internal server error');
   }
 });
