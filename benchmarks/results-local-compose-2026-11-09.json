@@ -1,0 +1,463 @@
+{
+  "benchmark": "authenticated location update end-to-end",
+  "environment": "API-level, local Compose, single instance",
+  "startedAt": "2026-11-09T16:39:09.188Z",
+  "completedAt": "2026-11-09T16:45:27.341Z",
+  "requiredConcurrencyLevels": [
+    1,
+    5,
+    10,
+    30
+  ],
+  "runsPerLevel": 3,
+  "durationSecondsPerRun": 30,
+  "accountCount": 20,
+  "dockerEngine": "Docker Engine 28.5.1; CPUs=16; MemoryBytes=7927427072",
+  "serviceVersions": "Backend Node v20.20.2; Safety Score and Case Report FastAPI 0.162.2; scikit-learn 1.9.1; ReportLab 5.1.0",
+  "runs": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.0463198,
+      "concurrency": 1,
+      "totalRequests": 523,
+      "successfulRequests": 523,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 17.40645787841212,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 56.6977999999981,
+          "p95": 61.5317,
+          "p99": 74.8804999999993
+        },
+        "allResponses": {
+          "p50": 56.6977999999981,
+          "p95": 61.5317,
+          "p99": 74.8804999999993
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.048295600000003,
+      "concurrency": 1,
+      "totalRequests": 512,
+      "successfulRequests": 512,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 17.03923599580137,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 56.98980000000029,
+          "p95": 69.8393000000001,
+          "p99": 81.50430000000051
+        },
+        "allResponses": {
+          "p50": 56.98980000000029,
+          "p95": 69.8393000000001,
+          "p99": 81.50430000000051
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.0431028,
+      "concurrency": 1,
+      "totalRequests": 524,
+      "successfulRequests": 524,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 17.441607263015456,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 56.03059999999823,
+          "p95": 64.90509999999995,
+          "p99": 81.57359999999971
+        },
+        "allResponses": {
+          "p50": 56.03059999999823,
+          "p95": 64.90509999999995,
+          "p99": 81.57359999999971
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 1,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.2072482,
+      "concurrency": 5,
+      "totalRequests": 702,
+      "successfulRequests": 702,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 23.239455489361657,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 211.52440000000206,
+          "p95": 263.9419999999991,
+          "p99": 308.5473000000002
+        },
+        "allResponses": {
+          "p50": 211.52440000000206,
+          "p95": 263.9419999999991,
+          "p99": 308.5473000000002
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.1382421,
+      "concurrency": 5,
+      "totalRequests": 689,
+      "successfulRequests": 689,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.861320103338077,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 217.01889999999912,
+          "p95": 270.78689999999915,
+          "p99": 305.83000000000175
+        },
+        "allResponses": {
+          "p50": 217.01889999999912,
+          "p95": 270.78689999999915,
+          "p99": 305.83000000000175
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.074275699999998,
+      "concurrency": 5,
+      "totalRequests": 691,
+      "successfulRequests": 691,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.976446943990744,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 214.95659999999998,
+          "p95": 269.3617000000013,
+          "p99": 298.8110000000015
+        },
+        "allResponses": {
+          "p50": 214.95659999999998,
+          "p95": 269.3617000000013,
+          "p99": 298.8110000000015
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 1,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.2990428,
+      "concurrency": 10,
+      "totalRequests": 684,
+      "successfulRequests": 684,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.57497058619951,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 440.7714999999989,
+          "p95": 540.7574999999997,
+          "p99": 603.4361000000026
+        },
+        "allResponses": {
+          "p50": 440.7714999999989,
+          "p95": 540.7574999999997,
+          "p99": 603.4361000000026
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.3563486,
+      "concurrency": 10,
+      "totalRequests": 690,
+      "successfulRequests": 690,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.730006467246856,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 436.813299999998,
+          "p95": 536.5499999999993,
+          "p99": 601.3221000000012
+        },
+        "allResponses": {
+          "p50": 436.813299999998,
+          "p95": 536.5499999999993,
+          "p99": 601.3221000000012
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.238484600000003,
+      "concurrency": 10,
+      "totalRequests": 683,
+      "successfulRequests": 683,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.587110731071487,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 441.3152999999984,
+          "p95": 551.6358,
+          "p99": 593.962300000001
+        },
+        "allResponses": {
+          "p50": 441.3152999999984,
+          "p95": 551.6358,
+          "p99": 593.962300000001
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 1,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.4031549,
+      "concurrency": 30,
+      "totalRequests": 688,
+      "successfulRequests": 688,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.629230494760264,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 1355.6654999999992,
+          "p95": 1749.335000000001,
+          "p99": 1938.8741
+        },
+        "allResponses": {
+          "p50": 1355.6654999999992,
+          "p95": 1749.335000000001,
+          "p99": 1938.8741
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.7021863,
+      "concurrency": 30,
+      "totalRequests": 694,
+      "successfulRequests": 694,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.604253430642494,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 1347.003,
+          "p95": 1650.4972000000016,
+          "p99": 1849.4457000000002
+        },
+        "allResponses": {
+          "p50": 1347.003,
+          "p95": 1650.4972000000016,
+          "p99": 1849.4457000000002
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "benchmark": "authenticated location update end-to-end",
+      "baseUrl": "http://localhost:5000",
+      "accountCount": 20,
+      "distinctAccountsUsed": 20,
+      "requestedDurationSeconds": 30,
+      "measuredDurationSeconds": 30.752198399999997,
+      "concurrency": 30,
+      "totalRequests": 684,
+      "successfulRequests": 684,
+      "failedRequests": 0,
+      "failureReasons": {},
+      "errorRatePercent": 0,
+      "successRatePercent": 100,
+      "successfulRequestsPerSecond": 22.242312276445254,
+      "latencyMs": {
+        "successfulResponses": {
+          "p50": 1380.7879000000003,
+          "p95": 1764.7122000000018,
+          "p99": 1909.8804000000018
+        },
+        "allResponses": {
+          "p50": 1380.7879000000003,
+          "p95": 1764.7122000000018,
+          "p99": 1909.8804000000018
+        }
+      },
+      "client": {
+        "os": "Windows_NT 10.0.26300",
+        "architecture": "x64",
+        "cpuLogicalCores": 16,
+        "memoryBytes": 16372613120,
+        "nodeVersion": "v22.19.0"
+      }
+    }
+  ]
+}

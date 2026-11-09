@@ -5,6 +5,7 @@
     "ai:safety": "python -m uvicorn main:app --app-dir AI_services/safety_score --host 0.0.0.0 --port 8001",
     "ai:case": "python -m uvicorn main:app --app-dir AI_services/case_report --host 0.0.0.0 --port 8002",
     "bench:location": "node benchmarks/location-update.mjs",
+    "bench:matrix": "node benchmarks/run-matrix.mjs",
     "compose:up": "docker compose up --build",
     "compose:down": "docker compose down"
   },
