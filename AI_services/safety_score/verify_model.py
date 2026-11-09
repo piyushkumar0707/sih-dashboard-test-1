@@ -3,8 +3,20 @@ Comprehensive model verification — run directly to prove the model works.
 Usage:  python verify_model.py
 """
 import json
+import os
+import time
+import jwt
 from fastapi.testclient import TestClient
 from main import app
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("Set JWT_SECRET before running this script")
+AUTH_HEADERS = {
+    "Authorization": "Bearer " + jwt.encode(
+        {"role": "tester", "exp": int(time.time()) + 60}, JWT_SECRET, algorithm="HS256"
+    )
+}
 
 tests = [
     # (label, request_body, expected_risk, expected_flag_keyword or None)
@@ -65,7 +77,7 @@ with TestClient(app) as client:
     print("=" * 76)
 
     for label, body, exp_risk, exp_flag in tests:
-        r = client.post("/calculate", json=body)
+        r = client.post("/calculate", json=body, headers=AUTH_HEADERS)
         assert r.status_code == 200, f"HTTP {r.status_code}: {r.text}"
         d = r.json()
 
@@ -105,7 +117,7 @@ with TestClient(app) as client:
     sample = client.post("/calculate", json={
         "geofence_risk": 5, "anomalies": 2, "time_of_day": 21,
         "movement_speed_kmh": 8.0, "historical_incidents_nearby": 3
-    }).json()
+    }, headers=AUTH_HEADERS).json()
     print(json.dumps(sample, indent=2))
 
 passed = results.count(PASS)

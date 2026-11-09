@@ -6,13 +6,36 @@ Loads a pre-trained Random Forest model at startup and performs real-time infere
 import os
 import time
 import numpy as np
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from typing import Optional, List
 import joblib
+from auth import require_token
 
 # ── App ────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Travira Safety Score API", version="2.0.0")
+
+
+@app.exception_handler(HTTPException)
+async def http_error_handler(_request, exc: HTTPException):
+    code = {400: "BAD_REQUEST", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 500: "INTERNAL_ERROR", 503: "SERVICE_UNAVAILABLE"}.get(exc.status_code, "REQUEST_FAILED")
+    return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "code": code})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(_request, exc: RequestValidationError):
+    return JSONResponse(status_code=400, content={
+        "error": "Request validation failed",
+        "code": "VALIDATION_ERROR",
+        "details": [{"field": ".".join(map(str, issue["loc"])), "message": issue["msg"]} for issue in exc.errors()],
+    })
+
+
+@app.exception_handler(Exception)
+async def unexpected_error_handler(_request, _exc: Exception):
+    return JSONResponse(status_code=500, content={"error": "Internal server error", "code": "INTERNAL_ERROR"})
 
 # ── Model loading ──────────────────────────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,11 +57,11 @@ def load_model():
 
 # ── Request / Response models ──────────────────────────────────────────────
 class ScoreRequest(BaseModel):
-    geofence_risk: float = 1.0            # 0-10
-    anomalies: int = 0                    # 0-5
-    time_of_day: Optional[int] = None     # 0-23; defaults to current hour
-    movement_speed_kmh: float = 4.0       # typical walking speed
-    historical_incidents_nearby: int = 0
+    geofence_risk: float = Field(default=1.0, ge=0, le=10)
+    anomalies: int = Field(default=0, ge=0, le=5)
+    time_of_day: Optional[int] = Field(default=None, ge=0, le=23)
+    movement_speed_kmh: float = Field(default=4.0, ge=0, le=500)
+    historical_incidents_nearby: int = Field(default=0, ge=0, le=100)
     # backward-compat field (ignored for inference but accepted)
     telemetry: Optional[dict] = None
 
@@ -70,7 +93,7 @@ def root():
     return {"message": "Safety Score API is running", "model": model_status}
 
 @app.post("/calculate")
-def calculate_score(data: ScoreRequest):
+def calculate_score(data: ScoreRequest, _user=Depends(require_token)):
     hour = data.time_of_day if data.time_of_day is not None else int(time.strftime("%H"))
 
     # Anomaly flags (independent of model prediction)

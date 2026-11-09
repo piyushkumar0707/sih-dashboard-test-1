@@ -14,13 +14,13 @@ class AIService {
    * @param {Object} data - Tourist telemetry data
    * @returns {Promise<Object>} Safety score and factors
    */
-  static async calculateSafetyScore(data) {
+  static async calculateSafetyScore(data, authorization) {
     // Extract parameters safely
-    const geofenceRisk = data?.geofenceRisk || 1;
-    const anomalies = data?.anomalies || 0;
+    const geofenceRisk = data?.geofenceRisk ?? 1;
+    const anomalies = data?.anomalies ?? 0;
     const telemetry = data?.telemetry || {};
-    const movementSpeedKmh = data?.movementSpeedKmh || telemetry?.movement_speed_kmh || 4;
-    const historicalIncidentsNearby = data?.historicalIncidentsNearby || 0;
+    const movementSpeedKmh = data?.movementSpeedKmh ?? telemetry?.movement_speed_kmh ?? 4;
+    const historicalIncidentsNearby = data?.historicalIncidentsNearby ?? 0;
     const timeOfDay = data?.timeOfDay != null ? data.timeOfDay : new Date().getHours();
     
     try {
@@ -32,7 +32,8 @@ class AIService {
         historical_incidents_nearby: historicalIncidentsNearby,
         time_of_day: timeOfDay
       }, {
-        timeout: 45000  // 45 seconds to allow for service wake-up from sleep
+        timeout: 45000,  // 45 seconds to allow for service wake-up from sleep
+        headers: authorization ? { Authorization: authorization } : {}
       });
       
       return {
@@ -77,7 +78,7 @@ class AIService {
    * @param {Object} incidentData - Incident details
    * @returns {Promise<Object>} Report generation result
    */
-  static async generateIncidentReport(incidentData) {
+  static async generateIncidentReport(incidentData, authorization) {
     try {
       const response = await axios.post(`${AI_CASE_REPORT_URL}/report`, {
         incident_id:          incidentData.incident_id || incidentData.incidentId || `INC-${Date.now()}`,
@@ -94,7 +95,8 @@ class AIService {
         blockchain_hash:      incidentData.blockchain_hash || incidentData.blockchainHash || null,
         status:               incidentData.status || 'Open',
       }, {
-        timeout: 45000
+        timeout: 45000,
+        headers: authorization ? { Authorization: authorization } : {}
       });
 
       return {
@@ -168,14 +170,14 @@ class AIService {
     };
 
     try {
-      const safetyCheck = await axios.get(`${AI_SAFETY_SCORE_URL}/`, { timeout: 45000 });  // 45 seconds
+      const safetyCheck = await axios.get(`${AI_SAFETY_SCORE_URL}/`, { timeout: 3000 });
       services.safetyScore = safetyCheck.status === 200;
     } catch (error) {
       console.log('Safety Score Service unavailable');
     }
 
     try {
-      const reportCheck = await axios.get(`${AI_CASE_REPORT_URL}/`, { timeout: 45000 });  // 45 seconds
+      const reportCheck = await axios.get(`${AI_CASE_REPORT_URL}/`, { timeout: 3000 });
       services.caseReport = reportCheck.status === 200;
     } catch (error) {
       console.log('Case Report Service unavailable');

@@ -4,9 +4,17 @@ import { io } from 'socket.io-client';
 // Singleton socket instance shared across all components
 let socketInstance = null;
 
+export const disconnectSocket = () => {
+  if (socketInstance) {
+    socketInstance.disconnect();
+    socketInstance = null;
+  }
+};
+
 const getSocket = () => {
   if (!socketInstance) {
     socketInstance = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000', {
+      auth: { token: localStorage.getItem('token') },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,

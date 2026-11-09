@@ -7,6 +7,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const { createAuthenticateToken, verifyBearerToken } = require('./auth');
 
 // Models
 const User = require('./models/User');
@@ -19,6 +20,7 @@ const AIService = require('./services/aiService');
 const BlockchainService = require('./services/blockchainService');
 const GeofencingService = require('./services/geofencingService');
 const NotificationService = require('./services/notificationService');
+const { validateBody, validators } = require('./validation');
 
 const app = express();
 const server = http.createServer(app);
@@ -30,38 +32,35 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'travira-secret-key-2024';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET must be configured before starting the backend');
+}
+const ERROR_CODES = {
+  400: 'BAD_REQUEST', 401: 'UNAUTHENTICATED', 403: 'FORBIDDEN', 404: 'NOT_FOUND',
+  413: 'PAYLOAD_TOO_LARGE', 422: 'VALIDATION_ERROR', 429: 'RATE_LIMITED',
+  500: 'INTERNAL_ERROR', 503: 'SERVICE_UNAVAILABLE'
+};
+const sendError = (res, status, message) => res.status(status).json({
+  error: message,
+  code: ERROR_CODES[status] || 'REQUEST_FAILED'
+});
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // JWT Authentication Middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-};
+const authenticateToken = createAuthenticateToken(JWT_SECRET);
 
 // Role-based access control middleware
 const requireRole = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return sendError(res, 401, 'Authentication required');
     }
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      return sendError(res, 403, 'Insufficient permissions');
     }
     next();
   };
@@ -87,8 +86,17 @@ mongoose.connect(process.env.MONGODB_URI, {
   console.error('❌ Full error:', err);
 });
 
-// Socket.IO connection handling
+// Socket.IO shares the API token and only exposes tracking events to staff.
+io.use((socket, next) => {
+  const { user, error } = verifyBearerToken(socket.handshake.auth?.token);
+  if (error) return next(new Error('Unauthorized'));
+  if (!['admin', 'officer'].includes(user.role)) return next(new Error('Forbidden'));
+  socket.data.user = user;
+  next();
+});
+
 io.on('connection', (socket) => {
+  socket.join('staff');
   console.log('📱 Client connected:', socket.id);
 
   socket.on('disconnect', () => {
@@ -98,18 +106,29 @@ io.on('connection', (socket) => {
 
 // Utility function to emit real-time updates
 const emitUpdate = (event, data) => {
-  io.emit(event, data);
+  io.to('staff').emit(event, data);
 };
 
 // ===== AUTHENTICATION ENDPOINTS =====
 
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', validateBody(validators.registration), async (req, res) => {
   try {
-    const { username, email, password, role = 'tourist' } = req.body;
+    const { username, email, password } = req.body;
+    const { user: requester, error: tokenError } = req.headers.authorization
+      ? verifyBearerToken(req.headers.authorization, JWT_SECRET)
+      : {};
+    if (tokenError) return sendError(res, 401, tokenError);
+    if (requester && requester.role !== 'admin') {
+      return sendError(res, 403, 'Only admins can create privileged accounts');
+    }
+    const requestedRole = requester ? req.body.role : 'tourist';
+    const role = ['tourist', 'officer'].includes(requestedRole) || (requester?.role === 'admin' && requestedRole === 'admin')
+      ? requestedRole
+      : 'tourist';
     
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
-      return res.status(400).json({ error: 'Username or email already exists' });
+      return sendError(res, 400, 'Username or email already exists');
     }
     
     const status = role === 'officer' ? 'pending' : 'active';
@@ -148,11 +167,11 @@ app.post('/api/register', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    sendError(res, 400, err.message);
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', validateBody(validators.credentials), async (req, res) => {
   try {
     const { username, password } = req.body;
     
@@ -161,16 +180,16 @@ app.post('/api/login', async (req, res) => {
     });
     
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return sendError(res, 401, 'Invalid credentials');
     }
     
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return sendError(res, 401, 'Invalid credentials');
     }
     
     if (user.status === 'suspended') {
-      return res.status(403).json({ error: 'Account suspended. Contact administrator.' });
+      return sendError(res, 403, 'Account suspended. Contact administrator.');
     }
     
     user.lastActive = new Date();
@@ -199,8 +218,19 @@ app.post('/api/login', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    sendError(res, 400, err.message);
   }
+});
+
+// Keep only login, registration, and health probes public. Every other API
+// endpoint (including mobile and AI routes) must pass JWT verification.
+app.use('/api', (req, res, next) => {
+  const publicPaths = new Set([
+    '/api/login', '/api/register', '/api/mobile/auth/login',
+    '/api/health', '/api/hello', '/api/test'
+  ]);
+  if (publicPaths.has(req.originalUrl.split('?')[0])) return next();
+  return authenticateToken(req, res, next);
 });
 
 // ===== USER MANAGEMENT ENDPOINTS =====
@@ -210,11 +240,11 @@ app.get('/api/users', authenticateToken, requireRole('admin'), async (req, res) 
     const users = await User.find({}).select('-password');
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.put('/api/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+app.put('/api/users/:id', authenticateToken, requireRole('admin'), validateBody(validators.userUpdate), async (req, res) => {
   try {
     const { role, status } = req.body;
     const user = await User.findByIdAndUpdate(
@@ -224,7 +254,7 @@ app.put('/api/users/:id', authenticateToken, requireRole('admin'), async (req, r
     ).select('-password');
     res.json(user);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    sendError(res, 400, err.message);
   }
 });
 
@@ -233,7 +263,7 @@ app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'User deleted successfully' });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    sendError(res, 400, err.message);
   }
 });
 
@@ -257,7 +287,7 @@ app.get('/api/tourists', authenticateToken, requireRole('admin', 'officer'), asy
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -265,21 +295,21 @@ app.get('/api/tourists/:id', authenticateToken, async (req, res) => {
   try {
     const tourist = await Tourist.findOne({ touristId: req.params.id });
     if (!tourist) {
-      return res.status(404).json({ error: 'Tourist not found' });
+      return sendError(res, 404, 'Tourist not found');
     }
     res.json(tourist);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.put('/api/tourists/:id/safety-score', async (req, res) => {
+app.put('/api/tourists/:id/safety-score', validateBody(validators.safetyScoreUpdate), async (req, res) => {
   try {
     const { safetyScore } = req.body;
     const tourist = await Tourist.findOne({ touristId: req.params.id });
     
     if (!tourist) {
-      return res.status(404).json({ error: 'Tourist not found' });
+      return sendError(res, 404, 'Tourist not found');
     }
     
     await tourist.updateSafetyScore(safetyScore);
@@ -289,7 +319,7 @@ app.put('/api/tourists/:id/safety-score', async (req, res) => {
     
     res.json(tourist);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -326,11 +356,11 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
       summary: stats
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.post('/api/incidents', authenticateToken, async (req, res) => {
+app.post('/api/incidents', authenticateToken, validateBody(validators.incident), async (req, res) => {
   try {
     const incidentCount = await Incident.countDocuments();
     const incidentId = `INC-2024-${String(incidentCount + 1).padStart(3, '0')}`;
@@ -355,16 +385,16 @@ app.post('/api/incidents', authenticateToken, async (req, res) => {
     
     res.status(201).json(incident);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.put('/api/incidents/:id', authenticateToken, async (req, res) => {
+app.put('/api/incidents/:id', authenticateToken, validateBody(validators.incidentUpdate), async (req, res) => {
   try {
     const incident = await Incident.findOne({ incidentId: req.params.id });
     
     if (!incident) {
-      return res.status(404).json({ error: 'Incident not found' });
+      return sendError(res, 404, 'Incident not found');
     }
     
     Object.assign(incident, req.body);
@@ -375,7 +405,7 @@ app.put('/api/incidents/:id', authenticateToken, async (req, res) => {
     
     res.json(incident);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -383,7 +413,7 @@ app.put('/api/incidents/:id', authenticateToken, async (req, res) => {
 app.post('/api/incidents/:id/generate-report', authenticateToken, async (req, res) => {
   try {
     const incident = await Incident.findOne({ incidentId: req.params.id });
-    if (!incident) return res.status(404).json({ error: 'Incident not found' });
+    if (!incident) return sendError(res, 404, 'Incident not found');
 
     // Enrich with tourist safety score if available
     let safetyScore = null;
@@ -410,10 +440,10 @@ app.post('/api/incidents/:id/generate-report', authenticateToken, async (req, re
       coordinates: coordStr,
       blockchain_hash: incident.blockchainHash || null,
       status: incident.status,
-    });
+    }, req.headers.authorization);
 
     if (!result.success && !result.pdf_base64) {
-      return res.status(503).json({ error: result.error || 'Report generation failed' });
+      return sendError(res, 503, result.error || 'Report generation failed');
     }
 
     // 6.5 — Mark report generated on the incident
@@ -430,15 +460,15 @@ app.post('/api/incidents/:id/generate-report', authenticateToken, async (req, re
     });
   } catch (err) {
     console.error('E-FIR generation error:', err.message);
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
 // ===== AI SERVICE INTEGRATION ENDPOINTS =====
 
-app.post('/api/ai/safety-score', async (req, res) => {
+app.post('/api/ai/safety-score', validateBody(validators.safetyScore), async (req, res) => {
   try {
-    const result = await AIService.calculateSafetyScore(req.body);
+    const result = await AIService.calculateSafetyScore(req.body, req.headers.authorization);
     res.json({
       safetyScore: result.safetyScore,
       confidence: result.confidence,
@@ -449,16 +479,17 @@ app.post('/api/ai/safety-score', async (req, res) => {
       timestamp: result.timestamp
     });
   } catch (err) {
-    res.status(500).json({ error: 'AI service unavailable' });
+    sendError(res, 500, 'AI service unavailable');
   }
 });
 
 app.post('/api/ai/generate-report', async (req, res) => {
   try {
-    const result = await AIService.generateIncidentReport(req.body);
+    const result = await AIService.generateIncidentReport(req.body, req.headers.authorization);
+    if (!result.success) return sendError(res, 503, 'Report generation unavailable');
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Report generation failed' });
+    sendError(res, 500, 'Report generation failed');
   }
 });
 
@@ -483,11 +514,10 @@ app.get('/api/ai/metrics', async (req, res) => {
       avgSafetyScore,
       predictedRisks,
       anomaliesDetected,
-      highRisk,
-      aiAccuracy: 94.2  // reported from last model evaluation
+      highRisk
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -519,7 +549,7 @@ app.get('/api/ai/trends', async (req, res) => {
     }
     res.json(trends);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -538,40 +568,40 @@ app.get('/api/geofences', authenticateToken, async (req, res) => {
     const geofences = await GeofencingService.getAllGeofences();
     res.json(geofences);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.post('/api/geofences', authenticateToken, requireRole('admin'), async (req, res) => {
+app.post('/api/geofences', authenticateToken, requireRole('admin'), validateBody(validators.geofence), async (req, res) => {
   try {
     const result = await GeofencingService.createGeofence(req.body);
     if (result.success) {
       res.status(201).json(result.geofence);
     } else {
-      res.status(400).json({ error: result.error });
+      sendError(res, 400, result.error);
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
 app.delete('/api/geofences/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const deleted = await Geofence.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Geofence not found' });
+    if (!deleted) return sendError(res, 404, 'Geofence not found');
     res.json({ success: true, message: 'Geofence deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.post('/api/geofences/check', async (req, res) => {
+app.post('/api/geofences/check', validateBody(validators.geofenceCheck), async (req, res) => {
   try {
     const { lat, lng } = req.body;
     const result = await GeofencingService.checkGeofenceViolations(lat, lng);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -582,7 +612,7 @@ app.get('/api/blockchain/logs', async (req, res) => {
     const result = await BlockchainService.getLogs();
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -594,32 +624,24 @@ app.get('/api/health', async (req, res) => {
     const blockchainOnline = await BlockchainService.checkHealth();
     
     const services = [
-      { name: 'Main API', status: 'online', uptime: '99.9%', responseTime: '120ms' },
+      { name: 'Main API', status: 'online' },
       { 
         name: 'AI Safety Score', 
         status: aiServices.safetyScore ? 'online' : 'offline', 
-        uptime: aiServices.safetyScore ? '98.5%' : '0%', 
-        responseTime: aiServices.safetyScore ? '450ms' : 'N/A',
         optional: true
       },
       { 
         name: 'AI Case Report', 
         status: aiServices.caseReport ? 'online' : 'offline', 
-        uptime: aiServices.caseReport ? '99.2%' : '0%', 
-        responseTime: aiServices.caseReport ? '1200ms' : 'N/A',
         optional: true
       },
       { 
         name: 'Database', 
         status: mongoose.connection.readyState === 1 ? 'online' : 'offline', 
-        uptime: '100%', 
-        responseTime: '45ms' 
       },
       { 
         name: 'Blockchain', 
         status: blockchainOnline ? 'online' : 'offline', 
-        uptime: blockchainOnline ? '95.1%' : '0%', 
-        responseTime: blockchainOnline ? '2300ms' : 'N/A',
         optional: true
       }
     ];
@@ -634,7 +656,7 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -656,9 +678,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         openIncidents: openIncidents,
         totalIncidents: allIncidents.length,
         averageSafetyScore: touristData ? touristData.safetyScore : 85,
-        highRiskTourists: touristData && touristData.safetyScore < 70 ? 1 : 0,
-        systemUptime: '99.8%',
-        averageResponseTime: '2.3 min'
+        highRiskTourists: touristData && touristData.safetyScore < 70 ? 1 : 0
       });
     }
     
@@ -678,12 +698,10 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       openIncidents: incidentStats.open,
       totalIncidents: incidentStats.total,
       averageSafetyScore: avgSafetyScore,
-      highRiskTourists,
-      systemUptime: '99.8%',
-      averageResponseTime: '2.3 min'
+      highRiskTourists
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -701,13 +719,13 @@ app.get('/api/dashboard/recent-activity', authenticateToken, async (req, res) =>
     
     res.json(activities);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
 // ===== MOBILE-SPECIFIC ENDPOINTS =====
 
-app.post('/api/mobile/auth/login', async (req, res) => {
+app.post('/api/mobile/auth/login', validateBody(validators.credentials), async (req, res) => {
   try {
     const { username, password, deviceId } = req.body;
     
@@ -716,11 +734,11 @@ app.post('/api/mobile/auth/login', async (req, res) => {
     });
     
     if (!user || !await user.comparePassword(password)) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return sendError(res, 401, 'Invalid credentials');
     }
     
     if (user.status === 'suspended') {
-      return res.status(403).json({ error: 'Account suspended' });
+      return sendError(res, 403, 'Account suspended');
     }
     
     const token = jwt.sign(
@@ -742,11 +760,11 @@ app.post('/api/mobile/auth/login', async (req, res) => {
       apiBaseUrl: `http://localhost:${PORT}/api`
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.post('/api/mobile/location/update', authenticateToken, async (req, res) => {
+app.post('/api/mobile/location/update', authenticateToken, validateBody(validators.location), async (req, res) => {
   try {
     const { lat, lng, accuracy, timestamp } = req.body;
     const userId = req.user.userId;
@@ -777,7 +795,7 @@ app.post('/api/mobile/location/update', authenticateToken, async (req, res) => {
       telemetry: { location: { lat, lng } },
       geofenceRisk: GeofencingService.calculateRiskMultiplier(geofenceCheck.violations),
       anomalies: 0
-    });
+    }, req.headers.authorization);
     
     if (aiScoreResult.success) {
       await tourist.updateSafetyScore(aiScoreResult.safetyScore);
@@ -814,11 +832,11 @@ app.post('/api/mobile/location/update', authenticateToken, async (req, res) => {
       geofenceCheck: geofenceCheck.hasViolations ? geofenceCheck : null
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
-app.post('/api/mobile/panic/alert', authenticateToken, async (req, res) => {
+app.post('/api/mobile/panic/alert', authenticateToken, validateBody(validators.panic), async (req, res) => {
   try {
     const { lat, lng, message } = req.body;
     const userId = req.user.userId;
@@ -888,7 +906,7 @@ app.post('/api/mobile/panic/alert', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Panic alert error:', error);
-    res.status(500).json({ error: 'Failed to send panic alert' });
+    sendError(res, 500, 'Failed to send panic alert');
   }
 });
 
@@ -921,23 +939,22 @@ app.get('/api/mobile/tourist/status', authenticateToken, async (req, res) => {
       ]
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
 // ===== TEST ENDPOINTS =====
 
 // 5.10 — Register / refresh device FCM token
-app.post('/api/mobile/device/register', authenticateToken, async (req, res) => {
+app.post('/api/mobile/device/register', authenticateToken, validateBody(validators.device), async (req, res) => {
   try {
     const { fcmToken } = req.body;
-    if (!fcmToken) return res.status(400).json({ error: 'fcmToken required' });
 
     await User.findByIdAndUpdate(req.user.userId, { fcmToken });
     console.log(`📱 FCM token saved for user ${req.user.username}`);
     res.json({ success: true, message: 'Device token registered' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -952,6 +969,15 @@ app.get('/api/test', (req, res) => {
     timestamp: new Date().toISOString(),
     server: 'Travira Backend v2.0'
   });
+});
+
+app.use('/api', (req, res) => sendError(res, 404, 'API endpoint not found'));
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const status = err.status === 413 ? 413 : (err.status === 400 ? 400 : 500);
+  const message = status === 413 ? 'Request body exceeds the 1 MB limit'
+    : status === 400 ? 'Malformed JSON request body' : 'Internal server error';
+  return sendError(res, status, message);
 });
 
 // Start server

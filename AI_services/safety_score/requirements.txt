@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+PyJWT
 scikit-learn
 joblib
 pandas

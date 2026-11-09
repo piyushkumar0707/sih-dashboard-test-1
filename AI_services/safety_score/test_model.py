@@ -6,6 +6,18 @@ Run: python test_model.py
 """
 from fastapi.testclient import TestClient
 from main import app
+import os
+import time
+import jwt
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("Set JWT_SECRET before running this script")
+AUTH_HEADERS = {
+    "Authorization": "Bearer " + jwt.encode(
+        {"role": "tester", "exp": int(time.time()) + 60}, JWT_SECRET, algorithm="HS256"
+    )
+}
 
 # ── Test scenarios ──────────────────────────────────────────────────────────
 # Each body maps directly to ScoreRequest fields.
@@ -77,7 +89,7 @@ print("=" * 72)
 with TestClient(app) as client:
 
     for s in scenarios:
-        resp = client.post("/calculate", json=s["body"])
+        resp = client.post("/calculate", json=s["body"], headers=AUTH_HEADERS)
         assert resp.status_code == 200, f"HTTP {resp.status_code}: {resp.text}"
         d = resp.json()
 

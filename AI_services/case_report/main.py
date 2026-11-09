@@ -1,9 +1,13 @@
 # http://127.0.0.1:8002
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from auth import require_token
+from pydantic import BaseModel, Field
 from typing import Optional
 import base64
+from html import escape
 import io
 import uuid
 from datetime import datetime
@@ -17,6 +21,26 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 app = FastAPI(title="Travira Case Report Service", version="2.0.0")
 
+
+@app.exception_handler(HTTPException)
+async def http_error_handler(_request, exc: HTTPException):
+    code = {400: "BAD_REQUEST", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 500: "INTERNAL_ERROR", 503: "SERVICE_UNAVAILABLE"}.get(exc.status_code, "REQUEST_FAILED")
+    return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "code": code})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(_request, exc: RequestValidationError):
+    return JSONResponse(status_code=400, content={
+        "error": "Request validation failed",
+        "code": "VALIDATION_ERROR",
+        "details": [{"field": ".".join(map(str, issue["loc"])), "message": issue["msg"]} for issue in exc.errors()],
+    })
+
+
+@app.exception_handler(Exception)
+async def unexpected_error_handler(_request, _exc: Exception):
+    return JSONResponse(status_code=500, content={"error": "Internal server error", "code": "INTERNAL_ERROR"})
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,19 +50,19 @@ app.add_middleware(
 
 
 class IncidentReport(BaseModel):
-    incident_id: str
-    type: str
-    location: str
-    severity: str
-    description: str
-    tourist_name: Optional[str] = "Unknown"
-    tourist_id: Optional[str] = "-"
-    officer_name: Optional[str] = "Unassigned"
-    timestamp: Optional[str] = None
-    safety_score_at_time: Optional[float] = None
-    coordinates: Optional[str] = None
-    blockchain_hash: Optional[str] = None
-    status: Optional[str] = "Open"
+    incident_id: str = Field(min_length=1, max_length=80)
+    type: str = Field(min_length=1, max_length=80)
+    location: str = Field(min_length=1, max_length=300)
+    severity: str = Field(min_length=1, max_length=30)
+    description: str = Field(min_length=1, max_length=5000)
+    tourist_name: Optional[str] = Field(default="Unknown", max_length=120)
+    tourist_id: Optional[str] = Field(default="-", max_length=80)
+    officer_name: Optional[str] = Field(default="Unassigned", max_length=120)
+    timestamp: Optional[str] = Field(default=None, max_length=80)
+    safety_score_at_time: Optional[float] = Field(default=None, ge=0, le=100)
+    coordinates: Optional[str] = Field(default=None, max_length=100)
+    blockchain_hash: Optional[str] = Field(default=None, max_length=200)
+    status: Optional[str] = Field(default="Open", max_length=40)
 
 
 @app.get("/")
@@ -47,7 +71,7 @@ def root():
 
 
 @app.post("/report")
-def generate_case_report(report: IncidentReport):
+def generate_case_report(report: IncidentReport, _user=Depends(require_token)):
     """Generate a structured E-FIR PDF and return it as a base64-encoded string."""
     try:
         buf = io.BytesIO()
@@ -173,18 +197,18 @@ def generate_case_report(report: IncidentReport):
 
         # ── Description ─────────────────────────────────────────────────────────
         story.append(Paragraph("3. Incident Description", section_style))
-        story.append(Paragraph(report.description, body_style))
+        story.append(Paragraph(escape(report.description), body_style))
 
         # ── Officer ─────────────────────────────────────────────────────────────
         story.append(Paragraph("4. Assigned Officer", section_style))
-        story.append(Paragraph(report.officer_name, body_style))
+        story.append(Paragraph(escape(report.officer_name or "Unassigned"), body_style))
 
         # ── Blockchain ──────────────────────────────────────────────────────────
         if report.blockchain_hash:
             story.append(Paragraph("5. Blockchain Verification", section_style))
             story.append(Paragraph(
                 f"This incident has been anchored to the blockchain.<br/>"
-                f"<b>Hash:</b> {report.blockchain_hash}",
+                f"<b>Hash:</b> {escape(report.blockchain_hash)}",
                 body_style,
             ))
 
@@ -211,5 +235,5 @@ def generate_case_report(report: IncidentReport):
             "generated_at": generated_at,
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="PDF generation failed")

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api';
+import { disconnectSocket } from '../hooks/useSocket';
 
 const AuthContext = createContext();
 
@@ -46,6 +47,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    disconnectSocket();
     setUser(null);
     localStorage.removeItem('traviraUser');
     localStorage.removeItem('token');
