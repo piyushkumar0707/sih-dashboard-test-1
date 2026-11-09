@@ -1,0 +1,68 @@
+name: Integration tests
+
+on:
+  push:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: integration-test-secret-at-least-32-chars
+      MONGODB_URI: mongodb://127.0.0.1:27017/travira_ci
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      - name: Install Python services and test dependencies
+        run: python -m pip install -r AI_services/safety_score/requirements.txt -r AI_services/case_report/requirements.txt pytest httpx
+
+      - name: Run Safety Score API tests
+        working-directory: AI_services/safety_score
+        run: python -m pytest -q test_api_integration.py
+
+      - name: Run Case Report API tests
+        working-directory: AI_services/case_report
+        run: python -m pytest -q test_api_integration.py
+
+      - name: Start Python services
+        run: |
+          nohup python -m uvicorn main:app --app-dir AI_services/safety_score --host 127.0.0.1 --port 8001 >/tmp/safety-score.log 2>&1 &
+          nohup python -m uvicorn main:app --app-dir AI_services/case_report --host 127.0.0.1 --port 8002 >/tmp/case-report.log 2>&1 &
+          for port in 8001 8002; do
+            ready=0
+            for attempt in $(seq 1 60); do
+              if curl --silent --fail "http://127.0.0.1:$port/" >/dev/null; then ready=1; break; fi
+              sleep 1
+            done
+            test "$ready" = 1 || { cat /tmp/safety-score.log /tmp/case-report.log; exit 1; }
+          done
+
+      - name: Run Node backend and location regression suites
+        run: npm --prefix backend run test:all
+        env:
+          TEST_PORT: 5057
+          AI_SAFETY_SCORE_URL: http://127.0.0.1:8001
+          AI_CASE_REPORT_URL: http://127.0.0.1:8002
